@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"></link>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></link>
+<style>
+  body{margin:0;background:#05070a;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  ::selection{background:rgba(99,102,241,0.35);}
+  input:focus,select:focus,textarea:focus{outline:none;}
+  textarea{font-family:'Inter',sans-serif;resize:none;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:4px;}
+</style>
+</helmet>
+
+<div style="position:relative;min-height:100vh;background:#05070a;color:#e2e8f0;">
+  <div style="position:absolute;top:-140px;left:200px;width:560px;height:560px;background:rgba(79,70,229,0.16);filter:blur(120px);border-radius:50%;pointer-events:none;"></div>
+
+  <div style="position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:28px 32px 60px;">
+
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;">
+      <a href="#" style="font-size:12.5px;color:#64748b;text-decoration:none;">← Todos os clientes</a>
+    </div>
+
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:16px;">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="width:56px;height:56px;border-radius:50%;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;font-size:19px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">MC</div>
+        <div>
+          <div style="font-size:22px;font-weight:800;color:#f8fafc;letter-spacing:-0.01em;">{{ client.name }}</div>
+          <div style="font-size:12.5px;color:#64748b;margin-top:3px;">{{ client.email }} · na Êxodo desde {{ client.startDate }}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button style="background:transparent;border:1px solid rgba(255,255,255,0.14);color:#94a3b8;font-size:12.5px;font-weight:600;padding:11px 18px;border-radius:10px;cursor:pointer;">Agendar Call</button>
+        <button onClick="{{ onAdvanceStep }}" style="background:linear-gradient(135deg,#6366f1,#4f46e5);border:none;color:#fff;font-size:12.5px;font-weight:700;padding:11px 20px;border-radius:10px;cursor:pointer;box-shadow:0 8px 20px -8px rgba(79,70,229,0.6);white-space:nowrap;">Liberar próxima etapa →</button>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:0;margin-bottom:36px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:20px 24px;overflow-x:auto;">
+      <sc-for list="{{ journeySteps }}" as="js" hint-placeholder-count="5">
+        <div style="display:flex;align-items:center;flex:1;min-width:110px;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0;">
+            <div style="{{ js.circleStyle }}">{{ js.marker }}</div>
+            <div style="text-align:center;">
+              <div style="{{ js.labelStyle }}">{{ js.label }}</div>
+              <div style="font-size:10px;color:#475569;margin-top:2px;">{{ js.dateLabel }}</div>
+            </div>
+          </div>
+          <div style="{{ js.lineStyle }}"></div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap;">
+      <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="6">
+        <button onClick="{{ tb.onClick }}" style="{{ tb.style }}">{{ tb.label }}</button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ isVisaoTab }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;">
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;">
+          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Faturamento atual</div>
+          <div style="font-size:22px;font-weight:800;color:#f8fafc;">R$ 16.500</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;">
+          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Capacidade da agenda</div>
+          <div style="font-size:22px;font-weight:800;color:#fbbf24;">82%</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:18px 20px;">
+          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;">Meta 90 dias</div>
+          <div style="font-size:22px;font-weight:800;color:#f8fafc;">R$ 25.000</div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:22px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin-bottom:16px;">Atividade recente</div>
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <sc-for list="{{ activityLog }}" as="ac" hint-placeholder-count="4">
+            <div style="display:flex;gap:12px;align-items:flex-start;">
+              <div style="width:7px;height:7px;border-radius:50%;background:#6366f1;margin-top:6px;flex-shrink:0;"></div>
+              <div>
+                <div style="font-size:13px;color:#e2e8f0;">{{ ac.text }}</div>
+                <div style="font-size:11px;color:#475569;margin-top:2px;">{{ ac.date }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isRitualTab }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;gap:14px;max-width:820px;">
+        <sc-for list="{{ ritualRows }}" as="r" hint-placeholder-count="3">
+          <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:20px 22px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+              <div style="font-size:14px;font-weight:700;color:#f8fafc;">{{ r.label }}</div>
+              <span style="{{ r.badgeStyle }}">{{ r.badgeLabel }}</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                  <span style="font-size:11.5px;color:#94a3b8;">Faturamento</span>
+                  <span style="font-size:11.5px;color:#64748b;">Meta: R$ {{ r.metaFaturamentoDisplay }}</span>
+                </div>
+                <div style="position:relative;">
+                  <span style="position:absolute;left:0;top:6px;font-size:16px;color:#475569;">R$</span>
+                  <input value="{{ r.realFaturamentoDisplay }}" onChange="{{ r.onFaturamentoChange }}" style="width:100%;background:transparent;border:none;border-bottom:2px solid #6366f1;color:#a5b4fc;font-size:19px;font-weight:700;padding:0 0 8px 24px;box-sizing:border-box;"></input>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                  <span style="font-size:11.5px;color:#94a3b8;">Pacientes ativos</span>
+                  <span style="font-size:11.5px;color:#64748b;">Meta: {{ r.metaPacientes }}</span>
+                </div>
+                <input value="{{ r.realPacientes }}" onChange="{{ r.onPacientesChange }}" type="number" style="width:100%;background:transparent;border:none;border-bottom:2px solid #6366f1;color:#a5b4fc;font-size:19px;font-weight:700;padding:0 0 8px;box-sizing:border-box;"></input>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isCallsTab }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+        <sc-for list="{{ callChips }}" as="cc" hint-placeholder-count="3">
+          <button onClick="{{ cc.onClick }}" style="{{ cc.style }}">{{ cc.label }}</button>
+        </sc-for>
+        <button onClick="{{ onAddCall }}" style="padding:9px 14px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px dashed rgba(255,255,255,0.16);background:transparent;color:#94a3b8;">+ Nova call</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:20px;max-width:1000px;">
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin-bottom:10px;">Transcrição completa</div>
+          <textarea value="{{ activeCall.transcript }}" onChange="{{ onTranscriptChange }}" rows="16" placeholder="Cole ou escreva a transcrição desta call..." style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#e2e8f0;font-size:13.5px;line-height:1.6;padding:16px;box-sizing:border-box;"></textarea>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin-bottom:10px;">Pauta estratégica</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+            <sc-for list="{{ activeCall.agenda }}" as="ag" hint-placeholder-count="4">
+              <div style="display:flex;align-items:flex-start;gap:10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:11px 13px;">
+                <input type="checkbox" checked="{{ ag.done }}" onChange="{{ ag.onToggle }}" style="margin-top:2px;accent-color:#6366f1;flex-shrink:0;"></input>
+                <div style="flex:1;font-size:13px;color:#e2e8f0;{{ ag.textDecoration }}">{{ ag.text }}</div>
+                <button onClick="{{ ag.onRemove }}" style="background:transparent;border:none;color:#475569;cursor:pointer;font-size:13px;flex-shrink:0;">×</button>
+              </div>
+            </sc-for>
+          </div>
+          <input value="{{ agendaDraft }}" onChange="{{ onAgendaDraftChange }}" onKeyDown="{{ onAgendaKeyDown }}" placeholder="Novo item da pauta e Enter" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:9px;color:#e2e8f0;font-size:13px;padding:10px 12px;box-sizing:border-box;"></input>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isNotasTab }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:720px;">
+        <div style="font-size:12px;color:#64748b;margin-bottom:14px;line-height:1.5;">Notas privadas do consultor — nunca visíveis para a nutricionista.</div>
+        <textarea value="{{ notasText }}" onChange="{{ onNotasChange }}" rows="8" placeholder="Registre observações gerais sobre este cliente..." style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#e2e8f0;font-size:14px;line-height:1.6;padding:16px;box-sizing:border-box;"></textarea>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPlaceholderTab }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:640px;padding:40px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;">
+        <div style="font-size:14px;color:#94a3b8;line-height:1.6;">{{ placeholderText }}</div>
+      </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  stepOrder = ['retrato', 'call1', 'caminho', 'plano', 'execucao'];
+  stepMeta = [
+    { id: 'retrato', label: 'Retrato' },
+    { id: 'call1', label: 'Call 1' },
+    { id: 'caminho', label: 'O Caminho' },
+    { id: 'plano', label: 'O Plano' },
+    { id: 'execucao', label: 'Execução' }
+  ];
+
+  state = {
+    activeTab: 'visao',
+    activeCallId: 2,
+    agendaDraft: '',
+    calls: [
+      { id: 1, label: 'Call 1 — Alinhamento', transcript: 'Consultor: Vamos revisar o que você respondeu no Retrato...\nFernanda: Acho que o maior gargalo é a agenda, sinto que não tenho horário livre.\nConsultor: Percebi isso também — sua capacidade já está em 82%...', agenda: [
+        { id: 1, text: 'Validar prioridades do Eixo 1 (Promessa)', done: true },
+        { id: 2, text: 'Confirmar dados de faturamento dos últimos 3 meses', done: true },
+        { id: 3, text: 'Explicar o cálculo de capacidade da agenda', done: true }
+      ]},
+      { id: 2, label: 'Call 2 — O Caminho', transcript: 'Consultor: Simulamos dois cenários com base no seu Retrato...\nFernanda: O cenário com ticket maior parece mais realista para mim.\nConsultor: Combinado, vamos aprovar o Cenário A como oficial.', agenda: [
+        { id: 4, text: 'Apresentar Cenário Real vs. Cenário A', done: true },
+        { id: 5, text: 'Aprovar cenário oficial com a cliente', done: true },
+        { id: 6, text: 'Alinhar expectativa de prazo para o Plano de 12 Semanas', done: false }
+      ]}
+    ],
+    notasText: 'Cliente muito engajada no Retrato, respondeu tudo em 2 dias. Ponto de atenção: agenda já em 82% de capacidade — negociar com cautela qualquer meta de crescimento de pacientes na Call 2.',
+    client: { name: 'Fernanda Alves', email: 'fernanda.alves@email.com', startDate: '12 mai 2026', currentStep: 'plano', stepDates: { retrato: '12 mai', call1: '19 mai', caminho: '26 mai', plano: '2 jun', execucao: null } },
+    rituais: [
+      { id: 1, mes: 'Mês 1', metaFaturamento: 2000000, metaPacientes: 24, realFaturamento: 1850000, realPacientes: 22 },
+      { id: 2, mes: 'Mês 2', metaFaturamento: 2200000, metaPacientes: 26, realFaturamento: 0, realPacientes: 0 },
+      { id: 3, mes: 'Mês 3', metaFaturamento: 2500000, metaPacientes: 28, realFaturamento: 0, realPacientes: 0 }
+    ],
+    activityLog: [
+      { id: 1, text: 'Cenário "A — Aumento de ticket" aprovado como oficial', date: '2 jun 2026' },
+      { id: 2, text: 'Plano de 12 Semanas publicado pelo consultor', date: '2 jun 2026' },
+      { id: 3, text: 'Call 2 (O Caminho) concluída', date: '26 mai 2026' },
+      { id: 4, text: 'Retrato — 9 Eixos concluído', date: '14 mai 2026' }
+    ]
+  };
+
+  fmtBRL(cents) { return ((cents || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  advanceStep() {
+    this.setState(s => {
+      const idx = this.stepOrder.indexOf(s.client.currentStep);
+      return { client: { ...s.client, currentStep: this.stepOrder[Math.min(idx + 1, this.stepOrder.length - 1)] } };
+    });
+  }
+
+  updateRitual(id, patch) { this.setState(s => ({ rituais: s.rituais.map(r => r.id === id ? { ...r, ...patch } : r) })); }
+
+  selectCall(id) { this.setState({ activeCallId: id }); }
+  addCall() { this.setState(s => ({ calls: [...s.calls, { id: Date.now(), label: 'Call ' + (s.calls.length + 1), transcript: '', agenda: [] }], activeCallId: Date.now() })); }
+  updateCall(id, patch) { this.setState(s => ({ calls: s.calls.map(c => c.id === id ? { ...c, ...patch } : c) })); }
+  toggleAgendaItem(callId, itemId) { this.updateCall(callId, { agenda: this.state.calls.find(c => c.id === callId).agenda.map(a => a.id === itemId ? { ...a, done: !a.done } : a) }); }
+  removeAgendaItem(callId, itemId) { this.updateCall(callId, { agenda: this.state.calls.find(c => c.id === callId).agenda.filter(a => a.id !== itemId) }); }
+  addAgendaItem(callId) {
+    const text = this.state.agendaDraft.trim();
+    if (!text) return;
+    this.updateCall(callId, { agenda: [...this.state.calls.find(c => c.id === callId).agenda, { id: Date.now(), text, done: false }] });
+    this.setState({ agendaDraft: '' });
+  }
+
+  renderVals() {
+    const currentIdx = this.stepOrder.indexOf(this.state.client.currentStep);
+    const journeySteps = this.stepMeta.map((s, i) => {
+      const isDone = i < currentIdx, isActive = i === currentIdx;
+      let circleStyle = 'width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;';
+      let labelStyle = 'font-size:11px;font-weight:600;';
+      if (isDone) { circleStyle += 'background:#6366f1;color:#fff;border:1px solid #6366f1;'; labelStyle += 'color:#94a3b8;'; }
+      else if (isActive) { circleStyle += 'background:transparent;color:#fff;border:1.5px solid #6366f1;box-shadow:0 0 0 4px rgba(99,102,241,0.15);'; labelStyle += 'color:#e2e8f0;'; }
+      else { circleStyle += 'background:transparent;color:#475569;border:1px solid rgba(255,255,255,0.14);'; labelStyle += 'color:#475569;'; }
+      const lineStyle = 'height:1px;flex:1;margin:0 4px;background:' + (i < currentIdx ? '#6366f1' : 'rgba(255,255,255,0.1)') + ';' + (i === this.stepMeta.length - 1 ? 'display:none;' : '');
+      const dateVal = this.state.client.stepDates[s.id];
+      return { label: s.label, marker: isDone ? '✓' : String(i + 1), circleStyle, labelStyle, lineStyle, dateLabel: dateVal || (isActive ? 'em andamento' : '—') };
+    });
+
+    const tabDefs = [
+      { id: 'visao', label: 'Visão Geral' },
+      { id: 'retrato', label: 'Retrato — 9 Eixos' },
+      { id: 'simulacao', label: 'Motor de Simulação' },
+      { id: 'plano', label: 'Plano de 12 Semanas' },
+      { id: 'rituais', label: 'Rituais Mensais' },
+      { id: 'calls', label: 'Calls & Pautas' },
+      { id: 'notas', label: 'Notas Internas · Privado' }
+    ];
+    const tabs = tabDefs.map(t => ({
+      label: t.label, onClick: () => this.setState({ activeTab: t.id }),
+      style: 'padding:9px 16px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid ' + (this.state.activeTab === t.id ? '#6366f1' : 'rgba(255,255,255,0.1)') + ';background:' + (this.state.activeTab === t.id ? 'rgba(99,102,241,0.15)' : 'transparent') + ';color:' + (this.state.activeTab === t.id ? '#a5b4fc' : '#94a3b8') + ';'
+    }));
+
+    const ritualRows = this.state.rituais.map(r => {
+      const hasReal = r.realFaturamento > 0;
+      const pct = hasReal ? Math.round((r.realFaturamento / r.metaFaturamento) * 100) : null;
+      const badgeColor = !hasReal ? '#475569' : pct >= 100 ? '#34d399' : pct >= 80 ? '#fbbf24' : '#f43f5e';
+      return {
+        label: r.mes, metaFaturamentoDisplay: this.fmtBRL(r.metaFaturamento), metaPacientes: r.metaPacientes,
+        realFaturamentoDisplay: this.fmtBRL(r.realFaturamento), realPacientes: r.realPacientes,
+        badgeLabel: hasReal ? pct + '% da meta' : 'Aguardando registro',
+        badgeStyle: 'font-size:10.5px;font-weight:700;padding:5px 11px;border-radius:100px;color:' + badgeColor + ';background:' + badgeColor + '1a;border:1px solid ' + badgeColor + '55;',
+        onFaturamentoChange: e => { const d = e.target.value.replace(/\D/g, ''); this.updateRitual(r.id, { realFaturamento: d ? parseInt(d, 10) : 0 }); },
+        onPacientesChange: e => this.updateRitual(r.id, { realPacientes: parseInt(e.target.value, 10) || 0 })
+      };
+    });
+
+    const tab = this.state.activeTab;
+    const placeholders = { retrato: 'Abra este cliente pelo Painel do Consultor para revisar as respostas dos 9 eixos e adicionar comentários por campo.', simulacao: 'Abra este cliente pelo Painel do Consultor para simular cenários no Motor de Simulação.', plano: 'Abra este cliente pelo Painel do Consultor para montar a matriz de 12 semanas.' };
+
+    const activeCallRaw = this.state.calls.find(c => c.id === this.state.activeCallId) || this.state.calls[0];
+    const callChips = this.state.calls.map(c => ({
+      label: c.label, onClick: () => this.selectCall(c.id),
+      style: 'padding:8px 14px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ' + (activeCallRaw.id === c.id ? '#6366f1' : 'rgba(255,255,255,0.1)') + ';background:' + (activeCallRaw.id === c.id ? 'rgba(99,102,241,0.15)' : 'transparent') + ';color:' + (activeCallRaw.id === c.id ? '#a5b4fc' : '#94a3b8') + ';'
+    }));
+    const activeCall = {
+      ...activeCallRaw,
+      onTranscriptChangeTarget: activeCallRaw.id,
+      agenda: activeCallRaw.agenda.map(a => ({ ...a, textDecoration: a.done ? 'text-decoration:line-through;color:#64748b;' : '', onToggle: () => this.toggleAgendaItem(activeCallRaw.id, a.id), onRemove: () => this.removeAgendaItem(activeCallRaw.id, a.id) }))
+    };
+
+    return {
+      client: this.state.client, onAdvanceStep: () => this.advanceStep(),
+      journeySteps, tabs,
+      isVisaoTab: tab === 'visao', isRitualTab: tab === 'rituais', isNotasTab: tab === 'notas', isCallsTab: tab === 'calls',
+      isPlaceholderTab: ['retrato', 'simulacao', 'plano'].includes(tab),
+      placeholderText: placeholders[tab] || '',
+      activityLog: this.state.activityLog, ritualRows,
+      callChips, activeCall,
+      onTranscriptChange: e => this.updateCall(activeCallRaw.id, { transcript: e.target.value }),
+      onAddCall: () => this.addCall(),
+      agendaDraft: this.state.agendaDraft, onAgendaDraftChange: e => this.setState({ agendaDraft: e.target.value }),
+      onAgendaKeyDown: e => { if (e.key === 'Enter') this.addAgendaItem(activeCallRaw.id); },
+      notasText: this.state.notasText, onNotasChange: e => this.setState({ notasText: e.target.value })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"></link>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></link>
+<style>
+  body{margin:0;background:#05070a;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  ::selection{background:rgba(99,102,241,0.35);}
+  input:focus,select:focus,textarea:focus{outline:none;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:4px;}
+</style>
+</helmet>
+
+<div style="position:relative;min-height:100vh;background:#05070a;color:#e2e8f0;display:flex;">
+  <div style="position:absolute;top:-140px;left:200px;width:560px;height:560px;background:rgba(79,70,229,0.16);filter:blur(120px);border-radius:50%;pointer-events:none;"></div>
+
+  <div style="position:relative;z-index:1;width:280px;flex-shrink:0;border-right:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;height:100vh;">
+    <div style="padding:22px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+      <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#6366f1,#4f46e5);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;flex-shrink:0;">A3</div>
+      <div style="font-weight:700;font-size:13.5px;color:#f8fafc;white-space:nowrap;">Editor de Perguntas</div>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:12px;">
+      <sc-for list="{{ eixoRows }}" as="ex" hint-placeholder-count="9">
+        <div onClick="{{ ex.onSelect }}" style="{{ ex.rowStyle }}">
+          <div style="font-size:12.5px;font-weight:700;color:#a5b4fc;">{{ ex.numLabel }}</div>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:#e2e8f0;">{{ ex.label }}</div>
+            <div style="font-size:10.5px;color:#64748b;margin-top:2px;">{{ ex.countLabel }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="position:relative;z-index:1;flex:1;height:100vh;overflow-y:auto;padding:32px 40px 60px;">
+    <div style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin-bottom:8px;">{{ activeEixoNumLabel }}</div>
+    <h1 style="margin:0 0 28px;font-size:26px;font-weight:800;color:#f8fafc;letter-spacing:-0.01em;">{{ activeEixoLabel }}</h1>
+
+    <div style="display:flex;flex-direction:column;gap:14px;max-width:760px;">
+      <sc-for list="{{ questions }}" as="q" hint-placeholder-count="4">
+        <div style="background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:20px 22px;">
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;">
+            <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;padding-top:2px;">
+              <button onClick="{{ q.onUp }}" style="background:transparent;border:1px solid rgba(255,255,255,0.12);color:#94a3b8;width:24px;height:22px;border-radius:6px;cursor:pointer;font-size:11px;">↑</button>
+              <button onClick="{{ q.onDown }}" style="background:transparent;border:1px solid rgba(255,255,255,0.12);color:#94a3b8;width:24px;height:22px;border-radius:6px;cursor:pointer;font-size:11px;">↓</button>
+            </div>
+            <textarea value="{{ q.text }}" onChange="{{ q.onTextChange }}" rows="2" placeholder="Enunciado da pergunta..." style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:9px;color:#f8fafc;font-size:14px;font-weight:600;line-height:1.4;padding:10px 12px;box-sizing:border-box;resize:none;font-family:'Inter',sans-serif;"></textarea>
+            <button onClick="{{ q.onRemove }}" style="background:transparent;border:none;color:#475569;cursor:pointer;font-size:16px;flex-shrink:0;padding:2px;">×</button>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;margin-left:36px;">
+            <span style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">Tipo</span>
+            <select value="{{ q.type }}" onChange="{{ q.onTypeChange }}" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:#e2e8f0;font-size:12.5px;padding:7px 10px;color-scheme:dark;">
+              <sc-for list="{{ typeOptions }}" as="to" hint-placeholder-count="8"><option value="{{ to }}" style="background:#12141a;color:#e2e8f0;">{{ to }}</option></sc-for>
+            </select>
+          </div>
+
+          <sc-if value="{{ q.showOptions }}" hint-placeholder-val="{{ false }}">
+            <div style="margin-left:36px;display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                <sc-for list="{{ q.options }}" as="opt" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:7px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:#a5b4fc;font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:100px;">
+                    {{ opt.label }}
+                    <button onClick="{{ opt.onRemove }}" style="background:transparent;border:none;color:#a5b4fc;cursor:pointer;font-size:13px;padding:0;line-height:1;">×</button>
+                  </div>
+                </sc-for>
+              </div>
+              <input value="{{ q.optionDraft }}" onChange="{{ q.onOptionDraftChange }}" onKeyDown="{{ q.onOptionKeyDown }}" placeholder="Digite uma opção e pressione Enter" style="max-width:320px;background:transparent;border:none;border-bottom:1.5px solid rgba(255,255,255,0.14);color:#e2e8f0;font-size:13px;padding:6px 0;box-sizing:border-box;"></input>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+
+      <button onClick="{{ onAddQuestion }}" style="border:1.5px dashed rgba(255,255,255,0.16);background:transparent;border-radius:14px;padding:16px;color:#94a3b8;font-size:13px;font-weight:600;cursor:pointer;">+ Adicionar pergunta a este eixo</button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  typeOptions = ['Texto curto', 'Área de texto', 'Escolha única', 'Múltipla escolha', 'Slider (0–10)', 'Moeda (R$)', 'Tags', 'Ranking'];
+
+  state = {
+    activeEixo: 0,
+    optionDrafts: {},
+    eixos: [
+      { id: 0, label: 'Promessa & Método', questions: [
+        { id: 1, text: 'Dos 7 pilares abaixo, ordene colocando no topo o que é a prioridade central do seu atendimento.', type: 'Ranking', options: ['Emagrecimento acelerado e sustentável', 'Ganho de massa magra e hipertrofia', 'Reversão de exames alterados', 'Alta performance esportiva', 'Acolhimento humanizado', 'Reeducação alimentar suave', 'Autonomia alimentar e relação saudável'] },
+        { id: 2, text: 'Qual é a ferramenta ou pilar técnico principal que você utiliza nas suas condutas?', type: 'Texto curto', options: [] },
+        { id: 3, text: 'De 0 a 10, qual a sua percepção da taxa de sucesso dos pacientes em atingir o objetivo principal?', type: 'Slider (0–10)', options: [] }
+      ]},
+      { id: 1, label: 'Captação', questions: [
+        { id: 4, text: 'Quais canais você utiliza ativamente para captar novos pacientes?', type: 'Múltipla escolha', options: ['Instagram', 'Google Ads / SEO', 'Indicação de Pacientes', 'Parcerias Médicas / Academias', 'Eventos / Palestras', 'Outros'] },
+        { id: 5, text: 'Você utiliza algum software de agendamento online automático?', type: 'Escolha única', options: ['Sim', 'Não', 'Não sei'] }
+      ]},
+      { id: 2, label: 'Vendas', questions: [
+        { id: 6, text: 'Você segue um script/roteiro padronizado na hora de apresentar o preço e fechar?', type: 'Escolha única', options: ['Sim', 'Não', 'Não sei'] },
+        { id: 7, text: 'Onde a venda é finalizada na maioria das vezes?', type: 'Escolha única', options: ['Mensagem (WhatsApp/DM)', 'Chamada de Vídeo / Reunião', 'Ambos'] },
+        { id: 8, text: 'Quais os motivos mais comuns para o cliente não fechar?', type: 'Múltipla escolha', options: ['Preço achado alto', 'Falta de horário na agenda', 'Formato (online/presencial)', 'Decisão adiada', 'Concorrência'] }
+      ]},
+      { id: 3, label: 'Serviços', questions: [
+        { id: 9, text: 'Cadastre os serviços e planos que você oferece hoje.', type: 'Ranking', options: ['Consulta', 'Pacote', 'Plano'] }
+      ]},
+      { id: 4, label: 'Entrega & Rotina', questions: [
+        { id: 10, text: 'Para cada entrega clínica da sua rotina, ela está incluída? Se sim, quanto tempo consome?', type: 'Escolha única', options: ['Sim', 'Não', 'Não sei'] }
+      ]},
+      { id: 5, label: 'Agenda', questions: [
+        { id: 11, text: 'Quais dias da semana e turnos o seu consultório está aberto para atendimento?', type: 'Múltipla escolha', options: ['Manhã', 'Tarde', 'Noite'] },
+        { id: 12, text: 'Você possui compromissos fixos que travam sua agenda?', type: 'Texto curto', options: [] }
+      ]},
+      { id: 6, label: 'Equipe', questions: [
+        { id: 13, text: 'Cadastre os membros da sua equipe de apoio e seus custos mensais.', type: 'Moeda (R$)', options: [] }
+      ]},
+      { id: 7, label: 'Financeiro', questions: [
+        { id: 14, text: 'Qual foi seu faturamento nos últimos meses (M-2, M-1, M-0)?', type: 'Moeda (R$)', options: [] },
+        { id: 15, text: 'Possui empréstimos ativos?', type: 'Escolha única', options: ['Sim', 'Não', 'Não sei'] }
+      ]},
+      { id: 8, label: 'Meta & Futuro', questions: [
+        { id: 16, text: 'Quais são suas metas de faturamento para os próximos 90 dias?', type: 'Moeda (R$)', options: [] },
+        { id: 17, text: 'Quantos pacientes ativos você deseja atender simultaneamente?', type: 'Texto curto', options: [] }
+      ]}
+    ]
+  };
+
+  selectEixo(id) { this.setState({ activeEixo: id }); }
+
+  updateQuestions(eixoId, fn) {
+    this.setState(s => ({ eixos: s.eixos.map(e => e.id === eixoId ? { ...e, questions: fn(e.questions) } : e) }));
+  }
+
+  addQuestion(eixoId) {
+    this.updateQuestions(eixoId, qs => [...qs, { id: Date.now(), text: '', type: 'Texto curto', options: [] }]);
+  }
+  removeQuestion(eixoId, qId) { this.updateQuestions(eixoId, qs => qs.filter(q => q.id !== qId)); }
+  moveQuestion(eixoId, qId, dir) {
+    this.updateQuestions(eixoId, qs => {
+      const arr = [...qs];
+      const idx = arr.findIndex(q => q.id === qId);
+      const swapIdx = idx + dir;
+      if (swapIdx < 0 || swapIdx >= arr.length) return qs;
+      [arr[idx], arr[swapIdx]] = [arr[swapIdx], arr[idx]];
+      return arr;
+    });
+  }
+  updateQuestion(eixoId, qId, patch) {
+    this.updateQuestions(eixoId, qs => qs.map(q => q.id === qId ? { ...q, ...patch } : q));
+  }
+  addOption(eixoId, qId) {
+    const draft = (this.state.optionDrafts[qId] || '').trim();
+    if (!draft) return;
+    this.updateQuestion(eixoId, qId, { options: [...(this.state.eixos.find(e => e.id === eixoId).questions.find(q => q.id === qId).options), draft] });
+    this.setState(s => ({ optionDrafts: { ...s.optionDrafts, [qId]: '' } }));
+  }
+  removeOption(eixoId, qId, idx) {
+    const q = this.state.eixos.find(e => e.id === eixoId).questions.find(qq => qq.id === qId);
+    this.updateQuestion(eixoId, qId, { options: q.options.filter((_, i) => i !== idx) });
+  }
+
+  renderVals() {
+    const activeEixo = this.state.eixos.find(e => e.id === this.state.activeEixo);
+
+    const eixoRows = this.state.eixos.map(ex => {
+      const selected = ex.id === this.state.activeEixo;
+      return {
+        numLabel: '0' + (ex.id + 1), label: ex.label, countLabel: ex.questions.length + ' pergunta(s)',
+        rowStyle: 'display:flex;align-items:flex-start;gap:12px;padding:12px 10px;border-radius:10px;cursor:pointer;margin-bottom:2px;background:' + (selected ? 'rgba(99,102,241,0.12)' : 'transparent') + ';border:1px solid ' + (selected ? 'rgba(99,102,241,0.25)' : 'transparent') + ';',
+        onSelect: () => this.selectEixo(ex.id)
+      };
+    });
+
+    const showOptionsFor = t => ['Escolha única', 'Múltipla escolha', 'Ranking'].includes(t);
+
+    const questions = activeEixo.questions.map(q => ({
+      ...q,
+      showOptions: showOptionsFor(q.type),
+      optionDraft: this.state.optionDrafts[q.id] || '',
+      onTextChange: e => this.updateQuestion(activeEixo.id, q.id, { text: e.target.value }),
+      onTypeChange: e => this.updateQuestion(activeEixo.id, q.id, { type: e.target.value }),
+      onRemove: () => this.removeQuestion(activeEixo.id, q.id),
+      onUp: () => this.moveQuestion(activeEixo.id, q.id, -1),
+      onDown: () => this.moveQuestion(activeEixo.id, q.id, 1),
+      onOptionDraftChange: e => this.setState(s => ({ optionDrafts: { ...s.optionDrafts, [q.id]: e.target.value } })),
+      onOptionKeyDown: e => { if (e.key === 'Enter') this.addOption(activeEixo.id, q.id); },
+      options: q.options.map((label, idx) => ({ label, onRemove: () => this.removeOption(activeEixo.id, q.id, idx) }))
+    }));
+
+    return {
+      eixoRows, activeEixoLabel: activeEixo.label, activeEixoNumLabel: 'Eixo 0' + (activeEixo.id + 1),
+      typeOptions: this.typeOptions, questions,
+      onAddQuestion: () => this.addQuestion(activeEixo.id)
+    };
+  }
+}
+</script>
+</body>
+</html>

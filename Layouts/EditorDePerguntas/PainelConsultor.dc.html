@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"></link>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></link>
+<style>
+  body{margin:0;background:#05070a;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  ::selection{background:rgba(99,102,241,0.35);}
+  input:focus,select:focus,textarea:focus{outline:none;}
+  textarea{font-family:'Inter',sans-serif;resize:none;}
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:4px;}
+</style>
+</helmet>
+
+<div style="position:relative;min-height:100vh;background:#05070a;color:#e2e8f0;display:flex;">
+  <div style="position:absolute;top:-140px;left:200px;width:560px;height:560px;background:rgba(79,70,229,0.16);filter:blur(120px);border-radius:50%;pointer-events:none;"></div>
+
+  <div style="position:relative;z-index:1;width:280px;flex-shrink:0;border-right:1px solid rgba(255,255,255,0.08);display:flex;flex-direction:column;height:100vh;">
+    <div style="padding:22px 20px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+      <div style="width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,#6366f1,#4f46e5);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;flex-shrink:0;">A3</div>
+      <div style="font-weight:700;font-size:13.5px;color:#f8fafc;white-space:nowrap;">Painel do Consultor</div>
+    </div>
+    <div style="padding:16px 20px 10px;flex-shrink:0;">
+      <input value="{{ clientSearch }}" onChange="{{ onSearchChange }}" placeholder="Buscar cliente..." style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:9px;color:#e2e8f0;font-size:13px;padding:9px 12px;box-sizing:border-box;"></input>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:6px 12px 16px;">
+      <sc-for list="{{ clientRows }}" as="cl" hint-placeholder-count="6">
+        <div onClick="{{ cl.onSelect }}" style="{{ cl.rowStyle }}">
+          <div style="width:34px;height:34px;border-radius:50%;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ cl.initials }}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:#e2e8f0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ cl.name }}</div>
+            <div style="{{ cl.badgeStyle }}">{{ cl.stepLabel }}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <div style="position:relative;z-index:1;flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:22px 32px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+      <div>
+        <div style="font-size:19px;font-weight:800;color:#f8fafc;letter-spacing:-0.01em;">{{ activeClientName }}</div>
+        <div style="font-size:12px;color:#64748b;margin-top:2px;">Etapa atual: <span style="color:#a5b4fc;font-weight:600;">{{ activeClientStepLabel }}</span></div>
+      </div>
+      <button onClick="{{ onAdvanceStep }}" style="background:linear-gradient(135deg,#6366f1,#4f46e5);border:none;color:#fff;font-size:12.5px;font-weight:700;padding:11px 20px;border-radius:10px;cursor:pointer;box-shadow:0 8px 20px -8px rgba(79,70,229,0.6);white-space:nowrap;">Liberar próxima etapa →</button>
+    </div>
+
+    <div style="display:flex;gap:8px;padding:18px 32px 0;flex-shrink:0;">
+      <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="3">
+        <button onClick="{{ tb.onClick }}" style="{{ tb.style }}">{{ tb.label }}</button>
+      </sc-for>
+    </div>
+
+    <div style="flex:1;overflow-y:auto;padding:24px 32px 48px;">
+
+      <sc-if value="{{ isRetratoTab }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px;">
+          <sc-for list="{{ eixoChips }}" as="ec" hint-placeholder-count="9">
+            <button onClick="{{ ec.onClick }}" style="{{ ec.style }}">{{ ec.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:14px;max-width:760px;">
+          <sc-for list="{{ qaFiltered }}" as="qa" hint-placeholder-count="4">
+            <div style="background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:20px 22px;">
+              <div style="font-size:10px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#64748b;margin-bottom:8px;">{{ qa.eixoLabel }}</div>
+              <div style="font-size:15px;font-weight:700;color:#f8fafc;margin-bottom:10px;line-height:1.4;">{{ qa.question }}</div>
+              <div style="font-size:14px;color:#c7d2fe;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.15);border-radius:10px;padding:12px 14px;line-height:1.5;">{{ qa.answer }}</div>
+              <button onClick="{{ qa.onToggle }}" style="{{ qa.toggleStyle }}">{{ qa.toggleLabel }}</button>
+              <sc-if value="{{ qa.expanded }}" hint-placeholder-val="{{ false }}">
+                <textarea value="{{ qa.comment }}" onChange="{{ qa.onCommentChange }}" placeholder="Adicione uma orientação ou comentário para a nutricionista..." rows="2" style="width:100%;margin-top:10px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.2);border-radius:10px;color:#fde68a;font-size:13px;line-height:1.5;padding:12px;box-sizing:border-box;"></textarea>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isSimulacaoTab }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;gap:18px;max-width:1000px;margin-bottom:20px;">
+          <sc-for list="{{ scenarios }}" as="sc" hint-placeholder-count="3">
+            <div style="{{ sc.cardStyle }}">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <input value="{{ sc.name }}" onChange="{{ sc.onNameChange }}" style="background:transparent;border:none;color:#f8fafc;font-size:15px;font-weight:700;padding:0;width:70%;" readOnly="{{ sc.readOnly }}"></input>
+                <sc-if value="{{ sc.isOfficial }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:9.5px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:#34d399;background:rgba(16,185,129,0.12);border:1px solid rgba(52,211,153,0.3);padding:4px 9px;border-radius:100px;">Oficial</span>
+                </sc-if>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+                <div>
+                  <div style="font-size:10px;color:#64748b;margin-bottom:5px;">Faturamento esperado</div>
+                  <div style="position:relative;">
+                    <span style="position:absolute;left:0;top:3px;font-size:14px;color:#475569;">R$</span>
+                    <input value="{{ sc.faturamentoDisplay }}" onChange="{{ sc.onFaturamentoChange }}" style="width:100%;background:transparent;border:none;border-bottom:1.5px solid rgba(99,102,241,0.4);color:#a5b4fc;font-size:19px;font-weight:700;padding:0 0 6px 24px;box-sizing:border-box;"></input>
+                  </div>
+                </div>
+                <div>
+                  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+                    <span style="font-size:10px;color:#64748b;">Capacidade da agenda</span>
+                    <span style="font-size:12px;font-weight:700;color:{{ sc.capColor }};">{{ sc.capacidade }}%</span>
+                  </div>
+                  <div style="height:6px;border-radius:3px;background:rgba(255,255,255,0.08);overflow:hidden;">
+                    <div style="{{ sc.capBarStyle }}"></div>
+                  </div>
+                  <input type="range" min="0" max="140" value="{{ sc.capacidade }}" onChange="{{ sc.onCapacidadeChange }}" style="width:100%;margin-top:6px;accent-color:#6366f1;"></input>
+                </div>
+                <div style="display:flex;justify-content:space-between;">
+                  <span style="font-size:12px;color:#94a3b8;">Ponto de Equilíbrio</span>
+                  <span style="font-size:13px;font-weight:700;color:#f8fafc;">R$ {{ sc.breakEvenDisplay }}</span>
+                </div>
+              </div>
+              <sc-if value="{{ sc.showApprove }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ sc.onApprove }}" style="width:100%;background:linear-gradient(135deg,#6366f1,#4f46e5);border:none;color:#fff;font-size:12.5px;font-weight:700;padding:10px;border-radius:9px;cursor:pointer;">Aprovar como Cenário Oficial</button>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ onAddScenario }}" style="border:1.5px dashed rgba(255,255,255,0.16);background:transparent;border-radius:14px;padding:14px 22px;color:#94a3b8;font-size:13px;font-weight:600;cursor:pointer;">+ Criar novo cenário simulado</button>
+      </sc-if>
+
+      <sc-if value="{{ isPlanoTab }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:6px;margin-bottom:22px;overflow-x:auto;padding-bottom:6px;">
+          <sc-for list="{{ weekChips }}" as="wk" hint-placeholder-count="12">
+            <button onClick="{{ wk.onClick }}" style="{{ wk.style }}">{{ wk.label }}</button>
+          </sc-for>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;max-width:720px;margin-bottom:18px;">
+          <sc-for list="{{ weekTasks }}" as="tk" hint-placeholder-count="3">
+            <div style="display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;">
+              <input type="checkbox" checked="{{ tk.done }}" onChange="{{ tk.onToggleDone }}" style="width:18px;height:18px;accent-color:#6366f1;flex-shrink:0;"></input>
+              <span style="{{ tk.originBadgeStyle }}">{{ tk.origin }}</span>
+              <div style="flex:1;font-size:13.5px;color:#e2e8f0;{{ tk.textDecoration }}">{{ tk.text }}</div>
+              <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#64748b;cursor:pointer;flex-shrink:0;">
+                <input type="checkbox" checked="{{ tk.published }}" onChange="{{ tk.onTogglePublished }}" style="accent-color:#34d399;"></input>
+                Publicado
+              </label>
+              <button onClick="{{ tk.onRemove }}" style="background:transparent;border:none;color:#475569;cursor:pointer;font-size:12px;flex-shrink:0;">×</button>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:10px;max-width:720px;">
+          <input value="{{ newTaskText }}" onChange="{{ onNewTaskTextChange }}" onKeyDown="{{ onNewTaskKeyDown }}" placeholder="Nova ação para esta semana..." style="flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:9px;color:#e2e8f0;font-size:13px;padding:11px 14px;box-sizing:border-box;"></input>
+          <select value="{{ newTaskOrigin }}" onChange="{{ onNewTaskOriginChange }}" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:9px;color:#e2e8f0;font-size:12.5px;padding:11px 12px;color-scheme:dark;">
+            <sc-for list="{{ eixoLabelsPlain }}" as="ol" hint-placeholder-count="9"><option value="{{ ol }}" style="background:#12141a;color:#e2e8f0;">{{ ol }}</option></sc-for>
+          </select>
+          <button onClick="{{ onAddTask }}" style="background:linear-gradient(135deg,#6366f1,#4f46e5);border:none;color:#fff;font-size:12.5px;font-weight:700;padding:11px 18px;border-radius:9px;cursor:pointer;white-space:nowrap;">Adicionar</button>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  eixoLabels = ['Promessa & Método', 'Captação', 'Vendas', 'Serviços', 'Entrega & Rotina', 'Agenda', 'Equipe', 'Financeiro', 'Meta & Futuro'];
+  stepLabels = { retrato: 'Preenchendo o Retrato', call1: 'Aguardando Call 1', caminho: 'Simulação de Cenários', plano: 'Montagem do Plano', execucao: 'Execução (Fase 2)' };
+  stepOrder = ['retrato', 'call1', 'caminho', 'plano', 'execucao'];
+
+  state = {
+    clientSearch: '',
+    activeClientId: 1,
+    activeTab: 'retrato',
+    activeEixo: 'all',
+    activeWeek: 1,
+    newTaskText: '',
+    newTaskOrigin: 'Captação',
+    clients: [
+      { id: 1, name: 'Marina Costa', step: 'caminho' },
+      { id: 2, name: 'Beatriz Lima', step: 'retrato' },
+      { id: 3, name: 'Fernanda Alves', step: 'plano' },
+      { id: 4, name: 'Juliana Prado', step: 'execucao' },
+      { id: 5, name: 'Camila Rocha', step: 'call1' }
+    ],
+    qaList: [
+      { id: 1, eixo: 0, question: 'Pilar prioritário do atendimento', answer: 'Resultado clínico mensurável, acompanhado de perto.', comment: '', expanded: false },
+      { id: 2, eixo: 0, question: 'Método principal', answer: 'Reeducação alimentar low carb.', comment: '', expanded: false },
+      { id: 3, eixo: 0, question: 'Taxa de sucesso percebida', answer: '8 de 10.', comment: '', expanded: false },
+      { id: 4, eixo: 1, question: 'Canais de captação ativos', answer: 'Instagram, Indicação de Pacientes.', comment: '', expanded: false },
+      { id: 5, eixo: 1, question: 'Usa aplicativo de agendamento?', answer: 'Sim — Calendly.', comment: '', expanded: false },
+      { id: 6, eixo: 2, question: 'Usa roteiro/script de vendas?', answer: 'Não.', comment: '', expanded: false },
+      { id: 7, eixo: 2, question: 'Usa CRM?', answer: 'Não sei.', comment: '', expanded: false },
+      { id: 8, eixo: 3, question: 'Serviços cadastrados', answer: 'Consulta Inicial (R$ 250), Pacote Trimestral (R$ 890), Plano Anual (R$ 3.200).', comment: '', expanded: false },
+      { id: 9, eixo: 4, question: 'Consulta inicial — duração', answer: '60 minutos.', comment: '', expanded: false },
+      { id: 10, eixo: 5, question: 'Dias e turnos de atendimento', answer: 'Seg a Sex, manhã e tarde.', comment: '', expanded: false },
+      { id: 11, eixo: 6, question: 'Equipe de apoio', answer: 'Camila Souza — Secretária — R$ 1.800/mês.', comment: '', expanded: false },
+      { id: 12, eixo: 7, question: 'Faturamento M-2 / M-1 / M-0', answer: 'R$ 14.200 / R$ 15.800 / R$ 16.500.', comment: '', expanded: false },
+      { id: 13, eixo: 8, question: 'Meta de faturamento em 90 dias', answer: 'R$ 25.000.', comment: '', expanded: false }
+    ],
+    scenarios: [
+      { id: 1, name: 'Cenário Real (Atual)', faturamento: 1650000, capacidade: 68, breakEven: 1180000, isOfficial: false, readOnly: true },
+      { id: 2, name: 'Cenário A — Aumento de ticket', faturamento: 2100000, capacidade: 82, breakEven: 1180000, isOfficial: true, readOnly: false }
+    ],
+    weeks: { 1: [{ id: 1, text: 'Revisar roteiro de vendas com base no Eixo 3', origin: 'Vendas', done: true, published: true }, { id: 2, text: 'Ativar app de agendamento online', origin: 'Captação', done: false, published: true }] }
+  };
+
+  fmtBRL(cents) { return ((cents || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+  selectClient(id) { this.setState({ activeClientId: id }); }
+  advanceStep() {
+    this.setState(s => ({
+      clients: s.clients.map(c => {
+        if (c.id !== s.activeClientId) return c;
+        const idx = this.stepOrder.indexOf(c.step);
+        return { ...c, step: this.stepOrder[Math.min(idx + 1, this.stepOrder.length - 1)] };
+      })
+    }));
+  }
+
+  toggleQA(id) { this.setState(s => ({ qaList: s.qaList.map(q => q.id === id ? { ...q, expanded: !q.expanded } : q) })); }
+  updateComment(id, val) { this.setState(s => ({ qaList: s.qaList.map(q => q.id === id ? { ...q, comment: val } : q) })); }
+
+  updateScenario(id, patch) { this.setState(s => ({ scenarios: s.scenarios.map(sc => sc.id === id ? { ...sc, ...patch } : sc) })); }
+  approveScenario(id) { this.setState(s => ({ scenarios: s.scenarios.map(sc => ({ ...sc, isOfficial: sc.id === id })) })); }
+  addScenario() { this.setState(s => ({ scenarios: [...s.scenarios, { id: Date.now(), name: 'Novo cenário', faturamento: 0, capacidade: 60, breakEven: s.scenarios[0].breakEven, isOfficial: false, readOnly: false }] })); }
+
+  addTask() {
+    const text = this.state.newTaskText.trim();
+    if (!text) return;
+    this.setState(s => {
+      const list = s.weeks[s.activeWeek] || [];
+      return { weeks: { ...s.weeks, [s.activeWeek]: [...list, { id: Date.now(), text, origin: s.newTaskOrigin, done: false, published: false }] }, newTaskText: '' };
+    });
+  }
+  toggleTask(id, field) {
+    this.setState(s => ({ weeks: { ...s.weeks, [s.activeWeek]: (s.weeks[s.activeWeek] || []).map(t => t.id === id ? { ...t, [field]: !t[field] } : t) } }));
+  }
+  removeTask(id) {
+    this.setState(s => ({ weeks: { ...s.weeks, [s.activeWeek]: (s.weeks[s.activeWeek] || []).filter(t => t.id !== id) } }));
+  }
+
+  renderVals() {
+    const search = this.state.clientSearch.toLowerCase();
+    const clientRows = this.state.clients.filter(c => c.name.toLowerCase().includes(search)).map(c => {
+      const selected = c.id === this.state.activeClientId;
+      return {
+        name: c.name, initials: c.name.split(' ').map(w => w[0]).slice(0, 2).join(''),
+        stepLabel: this.stepLabels[c.step],
+        rowStyle: 'display:flex;align-items:center;gap:12px;padding:10px 10px;border-radius:10px;cursor:pointer;margin-bottom:2px;background:' + (selected ? 'rgba(99,102,241,0.12)' : 'transparent') + ';border:1px solid ' + (selected ? 'rgba(99,102,241,0.25)' : 'transparent') + ';',
+        badgeStyle: 'font-size:10.5px;color:#818cf8;margin-top:2px;',
+        onSelect: () => this.selectClient(c.id)
+      };
+    });
+
+    const activeClient = this.state.clients.find(c => c.id === this.state.activeClientId) || this.state.clients[0];
+
+    const tabDefs = [{ id: 'retrato', label: 'Retrato — 9 Eixos' }, { id: 'simulacao', label: 'Motor de Simulação' }, { id: 'plano', label: 'Plano de 12 Semanas' }];
+    const tabs = tabDefs.map(t => ({
+      label: t.label, onClick: () => this.setState({ activeTab: t.id }),
+      style: 'padding:9px 16px;border-radius:9px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid ' + (this.state.activeTab === t.id ? '#6366f1' : 'rgba(255,255,255,0.1)') + ';background:' + (this.state.activeTab === t.id ? 'rgba(99,102,241,0.15)' : 'transparent') + ';color:' + (this.state.activeTab === t.id ? '#a5b4fc' : '#94a3b8') + ';'
+    }));
+
+    const eixoChipDefs = [{ id: 'all', label: 'Todos' }, ...this.eixoLabels.map((l, i) => ({ id: i, label: l }))];
+    const eixoChips = eixoChipDefs.map(e => ({
+      label: e.label, onClick: () => this.setState({ activeEixo: e.id }),
+      style: 'padding:7px 13px;border-radius:100px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid ' + (this.state.activeEixo === e.id ? '#6366f1' : 'rgba(255,255,255,0.12)') + ';background:' + (this.state.activeEixo === e.id ? 'rgba(99,102,241,0.15)' : 'transparent') + ';color:' + (this.state.activeEixo === e.id ? '#a5b4fc' : '#94a3b8') + ';'
+    }));
+
+    const qaFiltered = this.state.qaList.filter(q => this.state.activeEixo === 'all' || q.eixo === this.state.activeEixo).map(q => ({
+      ...q, eixoLabel: 'Eixo 0' + (q.eixo + 1) + ' · ' + this.eixoLabels[q.eixo],
+      onToggle: () => this.toggleQA(q.id),
+      toggleLabel: q.expanded ? '− Ocultar comentário' : (q.comment ? '✓ Comentário adicionado — editar' : '+ Adicionar comentário'),
+      toggleStyle: 'margin-top:12px;background:transparent;border:none;color:' + (q.comment ? '#34d399' : '#818cf8') + ';font-size:12px;font-weight:600;cursor:pointer;padding:0;',
+      onCommentChange: e => this.updateComment(q.id, e.target.value)
+    }));
+
+    const scenarios = this.state.scenarios.map(sc => {
+      const capColor = sc.capacidade < 75 ? '#34d399' : sc.capacidade <= 95 ? '#fbbf24' : '#f43f5e';
+      return {
+        ...sc, faturamentoDisplay: this.fmtBRL(sc.faturamento), breakEvenDisplay: this.fmtBRL(sc.breakEven),
+        capColor, capBarStyle: 'height:100%;width:' + Math.min(100, sc.capacidade) + '%;background:' + capColor + ';border-radius:3px;',
+        cardStyle: 'width:280px;background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid ' + (sc.isOfficial ? 'rgba(52,211,153,0.35)' : 'rgba(255,255,255,0.1)') + ';border-radius:14px;padding:20px;',
+        showApprove: !sc.isOfficial && !sc.readOnly,
+        onNameChange: e => this.updateScenario(sc.id, { name: e.target.value }),
+        onFaturamentoChange: e => { const d = e.target.value.replace(/\D/g, ''); this.updateScenario(sc.id, { faturamento: d ? parseInt(d, 10) : 0 }); },
+        onCapacidadeChange: e => this.updateScenario(sc.id, { capacidade: parseInt(e.target.value, 10) }),
+        onApprove: () => this.approveScenario(sc.id)
+      };
+    });
+
+    const weekChips = Array.from({ length: 12 }, (_, i) => i + 1).map(w => ({
+      label: 'Semana ' + w, onClick: () => this.setState({ activeWeek: w }),
+      style: 'flex-shrink:0;padding:8px 14px;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid ' + (this.state.activeWeek === w ? '#6366f1' : 'rgba(255,255,255,0.1)') + ';background:' + (this.state.activeWeek === w ? 'rgba(99,102,241,0.15)' : 'transparent') + ';color:' + (this.state.activeWeek === w ? '#a5b4fc' : '#94a3b8') + ';white-space:nowrap;'
+    }));
+
+    const weekTasks = (this.state.weeks[this.state.activeWeek] || []).map(t => ({
+      ...t,
+      textDecoration: t.done ? 'text-decoration:line-through;color:#64748b;' : '',
+      originBadgeStyle: 'font-size:9.5px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#a5b4fc;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);padding:4px 8px;border-radius:100px;flex-shrink:0;',
+      onToggleDone: () => this.toggleTask(t.id, 'done'),
+      onTogglePublished: () => this.toggleTask(t.id, 'published'),
+      onRemove: () => this.removeTask(t.id)
+    }));
+
+    return {
+      clientSearch: this.state.clientSearch, onSearchChange: e => this.setState({ clientSearch: e.target.value }),
+      clientRows, activeClientName: activeClient.name, activeClientStepLabel: this.stepLabels[activeClient.step],
+      onAdvanceStep: () => this.advanceStep(),
+      tabs, isRetratoTab: this.state.activeTab === 'retrato', isSimulacaoTab: this.state.activeTab === 'simulacao', isPlanoTab: this.state.activeTab === 'plano',
+      eixoChips, qaFiltered,
+      scenarios, onAddScenario: () => this.addScenario(),
+      weekChips, weekTasks,
+      newTaskText: this.state.newTaskText, onNewTaskTextChange: e => this.setState({ newTaskText: e.target.value }),
+      onNewTaskKeyDown: e => { if (e.key === 'Enter') this.addTask(); },
+      newTaskOrigin: this.state.newTaskOrigin, onNewTaskOriginChange: e => this.setState({ newTaskOrigin: e.target.value }),
+      eixoLabelsPlain: this.eixoLabels, onAddTask: () => this.addTask()
+    };
+  }
+}
+</script>
+</body>
+</html>

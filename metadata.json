@@ -1,0 +1,6 @@
+{
+  "name": "Sistema A3",
+  "description": "Sistema de gestão estratégica, precificação e modelagem de negócios para nutricionistas e consultores.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

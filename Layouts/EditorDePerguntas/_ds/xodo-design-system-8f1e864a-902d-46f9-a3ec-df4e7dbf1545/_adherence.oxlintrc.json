@@ -1,0 +1,308 @@
+{
+  "plugins": [
+    "react",
+    "import"
+  ],
+  "rules": {
+    "react/forbid-elements": [
+      "warn",
+      {
+        "forbid": []
+      }
+    ],
+    "no-restricted-imports": [
+      "warn",
+      {
+        "patterns": [
+          {
+            "group": [
+              "components/content/**",
+              "components/core/**",
+              "components/data/**",
+              "components/navigation/**",
+              "ui_kits/report/**"
+            ],
+            "message": "Import design-system components from 'index.js', not component internals."
+          }
+        ]
+      }
+    ],
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "Literal[value=/#[0-9a-fA-F]{3,8}\\b/]",
+        "message": "Raw hex color — use a design-system color token via var()."
+      },
+      {
+        "selector": "Literal[value=/\\b\\d+px\\b/]",
+        "message": "Raw px value — use a design-system spacing token via var()."
+      },
+      {
+        "selector": "Literal[value=/font-family\\s*:\\s*(?!['\\\"]?(?:Anton|Montserrat|Inter))/i]",
+        "message": "Font not provided by the design system. Available: Anton, Montserrat, Inter."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='BarDatum'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|value|highlight|key|ref|className|style|children)$/]",
+        "message": "<BarDatum> doesn't accept that prop. Declared props: label, value, highlight."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|variant|size|disabled|onClick|style|key|ref|className|style|children)$/]",
+        "message": "<Button> doesn't accept that prop. Declared props: children, variant, size, disabled, onClick, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:primary|secondary|tertiary|link)$/]",
+        "message": "<Button> variant must be one of 'primary' | 'secondary' | 'tertiary' | 'link'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
+        "message": "<Button> size must be one of 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Callout'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|children|tone|style|key|ref|className|style|children)$/]",
+        "message": "<Callout> doesn't accept that prop. Declared props: label, children, tone, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Callout'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:default|accent)$/]",
+        "message": "<Callout> tone must be one of 'default' | 'accent'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Card'] > JSXAttribute > JSXIdentifier[name!=/^(?:icon|title|children|style|key|ref|className|style|children)$/]",
+        "message": "<Card> doesn't accept that prop. Declared props: icon, title, children, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='CornerAccent'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|style|key|ref|className|style|children)$/]",
+        "message": "<CornerAccent> doesn't accept that prop. Declared props: variant, size, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='CornerAccent'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:fino|medio|diagonal|arredondado|barra)$/]",
+        "message": "<CornerAccent> variant must be one of 'fino' | 'medio' | 'diagonal' | 'arredondado' | 'barra'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='DataTable'] > JSXAttribute > JSXIdentifier[name!=/^(?:columns|rows|totalRow|style|key|ref|className|style|children)$/]",
+        "message": "<DataTable> doesn't accept that prop. Declared props: columns, rows, totalRow, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Divider'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|style|key|ref|className|style|children)$/]",
+        "message": "<Divider> doesn't accept that prop. Declared props: variant, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Divider'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:continua|secao|pontilhada|vertical|curta)$/]",
+        "message": "<Divider> variant must be one of 'continua' | 'secao' | 'pontilhada' | 'vertical' | 'curta'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='DotGrid'] > JSXAttribute > JSXIdentifier[name!=/^(?:rows|cols|style|key|ref|className|style|children)$/]",
+        "message": "<DotGrid> doesn't accept that prop. Declared props: rows, cols, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='PageFooter'] > JSXAttribute > JSXIdentifier[name!=/^(?:title|methodology|sources|confidentiality|page|total|date|company|style|key|ref|className|style|children)$/]",
+        "message": "<PageFooter> doesn't accept that prop. Declared props: title, methodology, sources, confidentiality, page, total, date, company, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='PageHeader'] > JSXAttribute > JSXIdentifier[name!=/^(?:index|label|question|intro|style|key|ref|className|style|children)$/]",
+        "message": "<PageHeader> doesn't accept that prop. Declared props: index, label, question, intro, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='PullQuote'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|attribution|style|key|ref|className|style|children)$/]",
+        "message": "<PullQuote> doesn't accept that prop. Declared props: children, attribution, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SectionNav'] > JSXAttribute > JSXIdentifier[name!=/^(?:sections|current|onSelect|variant|icons|style|key|ref|className|style|children)$/]",
+        "message": "<SectionNav> doesn't accept that prop. Declared props: sections, current, onSelect, variant, icons, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SectionNav'] > JSXAttribute[name.name='variant'] > Literal[value!=/^(?:padrao|icones|progresso)$/]",
+        "message": "<SectionNav> variant must be one of 'padrao' | 'icones' | 'progresso'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SectionTopic'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|children|style|key|ref|className|style|children)$/]",
+        "message": "<SectionTopic> doesn't accept that prop. Declared props: label, children, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='StatBlock'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|label|unit|delta|style|key|ref|className|style|children)$/]",
+        "message": "<StatBlock> doesn't accept that prop. Declared props: value, label, unit, delta, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Tag'] > JSXAttribute > JSXIdentifier[name!=/^(?:children|tone|style|key|ref|className|style|children)$/]",
+        "message": "<Tag> doesn't accept that prop. Declared props: children, tone, style."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Tag'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:diagnostico|evidencia|processo|informacao)$/]",
+        "message": "<Tag> tone must be one of 'diagnostico' | 'evidencia' | 'processo' | 'informacao'."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "**/index.js"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    }
+  ],
+  "x-omelette": {
+    "components": {
+      "BarDatum": {
+        "replaces": []
+      },
+      "Button": {
+        "replaces": []
+      },
+      "Callout": {
+        "replaces": []
+      },
+      "Card": {
+        "replaces": []
+      },
+      "CornerAccent": {
+        "replaces": []
+      },
+      "DataTable": {
+        "replaces": []
+      },
+      "Divider": {
+        "replaces": []
+      },
+      "DotGrid": {
+        "replaces": []
+      },
+      "PageFooter": {
+        "replaces": []
+      },
+      "PageHeader": {
+        "replaces": []
+      },
+      "PullQuote": {
+        "replaces": []
+      },
+      "SectionNav": {
+        "replaces": []
+      },
+      "SectionTopic": {
+        "replaces": []
+      },
+      "StatBlock": {
+        "replaces": []
+      },
+      "Tag": {
+        "replaces": []
+      }
+    },
+    "tokens": [
+      "--accent",
+      "--accent-tint",
+      "--border-default",
+      "--border-strong",
+      "--branco",
+      "--cinza-claro",
+      "--cinza-escuro",
+      "--cinza-medio",
+      "--exodo-red",
+      "--font-body",
+      "--font-display",
+      "--font-subtitle",
+      "--grid-gutter",
+      "--hairline",
+      "--lh-normal",
+      "--lh-relaxed",
+      "--lh-snug",
+      "--lh-tight",
+      "--page-margin",
+      "--preto",
+      "--radius-none",
+      "--radius-sm",
+      "--space-1",
+      "--space-10",
+      "--space-12",
+      "--space-16",
+      "--space-2",
+      "--space-3",
+      "--space-4",
+      "--space-5",
+      "--space-6",
+      "--space-8",
+      "--surface-card",
+      "--surface-inverse",
+      "--surface-page",
+      "--text-accent",
+      "--text-body",
+      "--text-body-lg",
+      "--text-display",
+      "--text-h1",
+      "--text-h2",
+      "--text-h3",
+      "--text-label",
+      "--text-on-inverse",
+      "--text-primary",
+      "--text-question",
+      "--text-secondary",
+      "--text-small",
+      "--text-tertiary",
+      "--tracking-normal",
+      "--tracking-tight",
+      "--tracking-wide",
+      "--tracking-wider"
+    ],
+    "tokenKinds": {
+      "--exodo-red": "color",
+      "--preto": "color",
+      "--cinza-escuro": "color",
+      "--cinza-medio": "color",
+      "--cinza-claro": "color",
+      "--branco": "color",
+      "--accent-tint": "color",
+      "--surface-page": "color",
+      "--surface-card": "color",
+      "--surface-inverse": "color",
+      "--text-primary": "font",
+      "--text-secondary": "font",
+      "--text-tertiary": "font",
+      "--text-on-inverse": "font",
+      "--text-accent": "font",
+      "--border-default": "color",
+      "--border-strong": "color",
+      "--accent": "color",
+      "--font-display": "font",
+      "--font-subtitle": "font",
+      "--font-body": "font",
+      "--text-question": "font",
+      "--text-display": "font",
+      "--text-h1": "font",
+      "--text-h2": "font",
+      "--text-h3": "font",
+      "--text-body-lg": "font",
+      "--text-body": "font",
+      "--text-small": "font",
+      "--text-label": "font",
+      "--lh-tight": "other",
+      "--lh-snug": "other",
+      "--lh-normal": "other",
+      "--lh-relaxed": "other",
+      "--tracking-tight": "font",
+      "--tracking-normal": "font",
+      "--tracking-wide": "font",
+      "--tracking-wider": "font",
+      "--space-1": "spacing",
+      "--space-2": "spacing",
+      "--space-3": "spacing",
+      "--space-4": "spacing",
+      "--space-5": "spacing",
+      "--space-6": "spacing",
+      "--space-8": "spacing",
+      "--space-10": "spacing",
+      "--space-12": "spacing",
+      "--space-16": "spacing",
+      "--page-margin": "spacing",
+      "--grid-gutter": "spacing",
+      "--radius-none": "radius",
+      "--radius-sm": "radius",
+      "--hairline": "spacing"
+    },
+    "fontFamilies": [
+      "Anton",
+      "Inter",
+      "Montserrat"
+    ]
+  }
+}

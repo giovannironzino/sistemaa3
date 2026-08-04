@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"></link>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></link>
+<style>
+  body{margin:0;background:#05070a;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  ::selection{background:rgba(99,102,241,0.35);}
+  input:focus,select:focus,textarea:focus{outline:none;}
+  textarea{font-family:'Inter',sans-serif;resize:none;}
+</style>
+</helmet>
+
+<div style="position:relative;min-height:100vh;background:#05070a;overflow:hidden;color:#e2e8f0;display:flex;flex-direction:column;">
+  <div style="position:absolute;top:-120px;left:-80px;width:520px;height:520px;background:rgba(79,70,229,0.22);filter:blur(100px);border-radius:50%;pointer-events:none;"></div>
+  <div style="position:absolute;bottom:-160px;right:-120px;width:480px;height:480px;background:rgba(16,185,129,0.10);filter:blur(100px);border-radius:50%;pointer-events:none;"></div>
+
+  <div style="position:relative;z-index:1;display:flex;flex-direction:column;flex:1;max-width:800px;width:100%;margin:0 auto;padding:28px 32px 40px;box-sizing:border-box;">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+      <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;">
+        <div style="width:30px;height:30px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#4f46e5);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff;flex-shrink:0;">A3</div>
+        <div style="font-weight:700;font-size:14px;color:#f8fafc;letter-spacing:-0.01em;white-space:nowrap;">Sistema A3</div>
+      </div>
+      <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#a5b4fc;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);padding:6px 12px;border-radius:100px;white-space:nowrap;flex-shrink:0;">Fase 1 · O Retrato</div>
+    </div>
+
+    <div style="display:flex;gap:5px;margin-bottom:36px;">
+      <sc-for list="{{ segments }}" as="seg" hint-placeholder-count="9">
+        <div style="flex:1;height:4px;border-radius:3px;background:rgba(255,255,255,0.1);overflow:hidden;">
+          <div style="{{ seg.fillStyle }}"></div>
+        </div>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ isFinished }}" hint-placeholder-val="{{ false }}">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;">
+        <div style="width:52px;height:52px;border-radius:50%;background:rgba(16,185,129,0.15);border:1px solid rgba(52,211,153,0.35);color:#34d399;font-size:24px;font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:24px;">✓</div>
+        <h1 style="margin:0 0 12px;font-size:32px;font-weight:800;color:#f8fafc;letter-spacing:-0.02em;">Retrato concluído.</h1>
+        <p style="margin:0 0 32px;font-size:15px;color:#94a3b8;line-height:1.6;max-width:480px;">Os 9 eixos foram respondidos. Seu consultor será notificado para revisar e agendar a Call 1 de alinhamento.</p>
+        <button onClick="{{ onBack }}" style="background:transparent;border:1px solid rgba(255,255,255,0.14);color:#94a3b8;font-size:13px;font-weight:600;padding:12px 22px;border-radius:10px;cursor:pointer;">Revisar respostas</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isNotFinished }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;">
+      <div style="font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:#64748b;margin-bottom:6px;">{{ eixoEyebrow }}</div>
+      <div style="font-size:11px;color:#475569;margin-bottom:20px;">{{ subPositionLabel }}</div>
+      <h1 style="margin:0 0 26px;font-size:29px;font-weight:800;color:#f8fafc;letter-spacing:-0.02em;line-height:1.3;max-width:640px;">{{ currentQuestion }}</h1>
+
+      <sc-if value="{{ typeIsText }}" hint-placeholder-val="{{ false }}">
+        <input value="{{ textAnswer }}" onChange="{{ onTextChange }}" onKeyDown="{{ onTextKeyDown }}" placeholder="{{ textPlaceholder }}" type="{{ textInputType }}" style="width:100%;max-width:480px;background:transparent;border:none;border-bottom:2px solid #6366f1;color:#a5b4fc;font-size:22px;font-weight:600;padding:0 0 10px;box-sizing:border-box;"></input>
+      </sc-if>
+
+      <sc-if value="{{ typeIsTextarea }}" hint-placeholder-val="{{ false }}">
+        <textarea value="{{ textAnswer }}" onChange="{{ onTextChange }}" placeholder="{{ textPlaceholder }}" rows="3" style="width:100%;max-width:600px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;color:#e2e8f0;font-size:15px;line-height:1.5;padding:14px;box-sizing:border-box;"></textarea>
+      </sc-if>
+
+      <sc-if value="{{ typeIsChoice }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+          <sc-for list="{{ choiceList }}" as="c" hint-placeholder-count="4">
+            <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsMulti }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;gap:10px;">
+          <sc-for list="{{ choiceList }}" as="c" hint-placeholder-count="4">
+            <button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsSlider }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:480px;">
+          <div style="font-size:40px;font-weight:800;color:#34d399;margin-bottom:14px;">{{ sliderDisplay }}</div>
+          <input type="range" min="{{ sliderMin }}" max="{{ sliderMax }}" step="1" value="{{ sliderValue }}" onChange="{{ onSliderChange }}" style="width:100%;accent-color:#6366f1;"></input>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsTags }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:560px;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+            <sc-for list="{{ tagsList }}" as="t" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:8px;background:rgba(245,158,11,0.1);border:1px solid rgba(251,191,36,0.25);color:#fbbf24;font-size:13px;font-weight:600;padding:8px 14px;border-radius:100px;">
+                {{ t.label }}
+                <button onClick="{{ t.onRemove }}" style="background:transparent;border:none;color:#fbbf24;cursor:pointer;font-size:14px;padding:0;line-height:1;">×</button>
+              </div>
+            </sc-for>
+          </div>
+          <input value="{{ tagDraft }}" onChange="{{ onTagDraftChange }}" onKeyDown="{{ onTagKeyDown }}" placeholder="Digite e pressione Enter" style="width:100%;background:transparent;border:none;border-bottom:2px solid rgba(255,255,255,0.14);color:#e2e8f0;font-size:16px;padding:0 0 8px;box-sizing:border-box;"></input>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsCurrency }}" hint-placeholder-val="{{ false }}">
+        <div style="position:relative;max-width:320px;">
+          <span style="position:absolute;left:0;top:8px;font-size:22px;color:#475569;">R$</span>
+          <input value="{{ currencyDisplay }}" onChange="{{ onCurrencyChange }}" style="width:100%;background:transparent;border:none;border-bottom:2px solid #6366f1;color:#a5b4fc;font-size:26px;font-weight:700;padding:0 0 10px 42px;box-sizing:border-box;"></input>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsCurrencyMulti }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:20px;flex-wrap:wrap;">
+          <sc-for list="{{ multiList }}" as="ct" hint-placeholder-count="3">
+            <div>
+              <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;margin-bottom:8px;">{{ ct.label }}</div>
+              <div style="position:relative;">
+                <span style="position:absolute;left:0;top:6px;font-size:14px;color:#475569;">R$</span>
+                <input value="{{ ct.display }}" onChange="{{ ct.onChange }}" style="width:130px;background:transparent;border:none;border-bottom:2px solid #6366f1;color:#a5b4fc;font-size:16px;font-weight:700;padding:0 0 8px 24px;box-sizing:border-box;"></input>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsNumberMulti }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:24px;">
+          <sc-for list="{{ multiList }}" as="nm" hint-placeholder-count="2">
+            <div>
+              <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;margin-bottom:8px;">{{ nm.label }}</div>
+              <input value="{{ nm.display }}" onChange="{{ nm.onChange }}" type="number" style="width:110px;background:transparent;border:none;border-bottom:2px solid #6366f1;color:#a5b4fc;font-size:20px;font-weight:700;padding:0 0 8px;box-sizing:border-box;"></input>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsNumberWithUnknown }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:320px;">
+          <input value="{{ textAnswer }}" onChange="{{ onTextChange }}" type="number" disabled="{{ unknownChecked }}" style="width:100%;background:transparent;border:none;border-bottom:2px solid #6366f1;color:#a5b4fc;font-size:22px;font-weight:600;padding:0 0 10px;box-sizing:border-box;opacity:{{ unknownOpacity }};"></input>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:16px;font-size:13px;color:#94a3b8;cursor:pointer;">
+            <input type="checkbox" checked="{{ unknownChecked }}" onChange="{{ onUnknownToggle }}"></input>
+            Não sei mensurar
+          </label>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsPerChannel }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:14px;max-width:640px;">
+          <sc-for list="{{ channelRows }}" as="row" hint-placeholder-count="3">
+            <div style="display:grid;grid-template-columns:1fr 130px 130px;align-items:center;gap:14px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 16px;">
+              <div style="font-size:13.5px;font-weight:600;color:#e2e8f0;">{{ row.label }}</div>
+              <div>
+                <div style="font-size:9.5px;color:#64748b;margin-bottom:4px;">Leads/mês</div>
+                <input value="{{ row.leads }}" onChange="{{ row.onLeadsChange }}" type="number" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:#f8fafc;font-size:13px;padding:6px 8px;box-sizing:border-box;"></input>
+              </div>
+              <div>
+                <div style="font-size:9.5px;color:#64748b;margin-bottom:4px;">Conversão %</div>
+                <input value="{{ row.conv }}" onChange="{{ row.onConvChange }}" type="number" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:#f8fafc;font-size:13px;padding:6px 8px;box-sizing:border-box;"></input>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsDeliveryTable }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;padding-right:6px;">
+          <sc-for list="{{ deliveryRows }}" as="d" hint-placeholder-count="6">
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 16px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                <div style="font-size:13.5px;font-weight:600;color:#e2e8f0;">{{ d.label }}</div>
+                <div style="display:flex;gap:6px;">
+                  <sc-for list="{{ d.options }}" as="opt" hint-placeholder-count="3">
+                    <button onClick="{{ opt.onClick }}" style="{{ opt.style }}">{{ opt.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+              <sc-if value="{{ d.showDuration }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+                  <span style="font-size:11px;color:#64748b;">Duração (min)</span>
+                  <input value="{{ d.duration }}" onChange="{{ d.onDurationChange }}" type="number" style="width:70px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:#f8fafc;font-size:12.5px;padding:5px 7px;box-sizing:border-box;"></input>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsSchedule }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:10px;max-height:420px;overflow-y:auto;padding-right:6px;">
+          <sc-for list="{{ scheduleDays }}" as="day" hint-placeholder-count="7">
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 16px;">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <div style="font-size:13px;font-weight:700;color:#e2e8f0;width:44px;flex-shrink:0;">{{ day.name }}</div>
+                <sc-for list="{{ day.turnos }}" as="t" hint-placeholder-count="3">
+                  <button onClick="{{ t.onToggle }}" style="{{ t.style }}">{{ t.label }}</button>
+                </sc-for>
+              </div>
+              <sc-for list="{{ day.activeRanges }}" as="r" hint-placeholder-count="1">
+                <div style="display:flex;align-items:center;gap:8px;margin-left:54px;font-size:12px;color:#94a3b8;margin-bottom:4px;">
+                  <span style="width:50px;">{{ r.label }}</span>
+                  <input value="{{ r.start }}" onChange="{{ r.onStartChange }}" style="width:70px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e2e8f0;font-size:12px;padding:4px 6px;box-sizing:border-box;"></input>
+                  <span>–</span>
+                  <input value="{{ r.end }}" onChange="{{ r.onEndChange }}" style="width:70px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;color:#e2e8f0;font-size:12px;padding:4px 6px;box-sizing:border-box;"></input>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsRank }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:10px;max-width:600px;">
+          <sc-for list="{{ pillars }}" as="p" hint-placeholder-count="7">
+            <div style="display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;">
+              <div style="width:26px;height:26px;border-radius:50%;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ p.rank }}</div>
+              <div style="flex:1;font-size:13.5px;font-weight:600;color:#e2e8f0;line-height:1.4;">{{ p.text }}</div>
+              <div style="display:flex;gap:4px;flex-shrink:0;">
+                <button onClick="{{ p.onUp }}" style="background:transparent;border:1px solid rgba(255,255,255,0.12);color:#94a3b8;width:26px;height:26px;border-radius:7px;cursor:pointer;font-size:12px;">↑</button>
+                <button onClick="{{ p.onDown }}" style="background:transparent;border:1px solid rgba(255,255,255,0.12);color:#94a3b8;width:26px;height:26px;border-radius:7px;cursor:pointer;font-size:12px;">↓</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsRepeater }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:14px;max-height:380px;overflow-y:auto;padding-right:4px;">
+          <sc-for list="{{ services }}" as="svc" hint-placeholder-count="3">
+            <div style="background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:20px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <input value="{{ svc.name }}" onChange="{{ svc.onNameChange }}" placeholder="Nome do serviço" style="background:transparent;border:none;color:#f8fafc;font-size:15px;font-weight:700;padding:0;width:70%;"></input>
+                <button onClick="{{ svc.onRemove }}" style="background:transparent;border:none;color:#64748b;cursor:pointer;padding:4px;font-size:12px;">Remover</button>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+                <select value="{{ svc.type }}" onChange="{{ svc.onTypeChange }}" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e2e8f0;font-size:12.5px;padding:8px 9px;color-scheme:dark;">
+                  <option value="Consulta" style="background:#12141a;color:#e2e8f0;">Consulta</option>
+                  <option value="Pacote" style="background:#12141a;color:#e2e8f0;">Pacote</option>
+                  <option value="Plano" style="background:#12141a;color:#e2e8f0;">Plano</option>
+                </select>
+                <div style="position:relative;">
+                  <span style="position:absolute;left:9px;top:50%;transform:translateY(-50%);font-size:12px;color:#64748b;">R$</span>
+                  <input value="{{ svc.priceDisplay }}" onChange="{{ svc.onPriceChange }}" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f8fafc;font-size:12.5px;font-weight:600;padding:8px 9px 8px 28px;box-sizing:border-box;"></input>
+                </div>
+                <input value="{{ svc.activePatients }}" onChange="{{ svc.onPatientsChange }}" placeholder="Pacientes ativos" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f8fafc;font-size:12.5px;font-weight:600;padding:8px 9px;box-sizing:border-box;"></input>
+              </div>
+            </div>
+          </sc-for>
+          <button onClick="{{ addService }}" style="border:1.5px dashed rgba(255,255,255,0.16);background:transparent;border-radius:14px;padding:14px;color:#94a3b8;font-size:12.5px;font-weight:600;cursor:pointer;">+ Adicionar serviço</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsRepeaterCommit }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:12px;max-height:380px;overflow-y:auto;padding-right:4px;">
+          <sc-for list="{{ commitments }}" as="cm" hint-placeholder-count="2">
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px;display:grid;grid-template-columns:1.4fr 1fr 0.8fr 0.8fr auto;gap:10px;align-items:center;">
+              <input value="{{ cm.name }}" onChange="{{ cm.onNameChange }}" placeholder="Nome do compromisso" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:#f8fafc;font-size:12.5px;padding:8px;box-sizing:border-box;"></input>
+              <select value="{{ cm.day }}" onChange="{{ cm.onDayChange }}" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:#e2e8f0;font-size:12.5px;padding:8px;color-scheme:dark;">
+                <sc-for list="{{ weekDayOptions }}" as="wd" hint-placeholder-count="7"><option value="{{ wd }}" style="background:#12141a;color:#e2e8f0;">{{ wd }}</option></sc-for>
+              </select>
+              <input value="{{ cm.start }}" onChange="{{ cm.onStartChange }}" placeholder="08:00" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:#e2e8f0;font-size:12.5px;padding:8px;box-sizing:border-box;"></input>
+              <input value="{{ cm.end }}" onChange="{{ cm.onEndChange }}" placeholder="12:00" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:#e2e8f0;font-size:12.5px;padding:8px;box-sizing:border-box;"></input>
+              <button onClick="{{ cm.onRemove }}" style="background:transparent;border:none;color:#64748b;cursor:pointer;font-size:12px;">Remover</button>
+            </div>
+          </sc-for>
+          <button onClick="{{ addCommitment }}" style="border:1.5px dashed rgba(255,255,255,0.16);background:transparent;border-radius:12px;padding:12px;color:#94a3b8;font-size:12.5px;font-weight:600;cursor:pointer;">+ Adicionar compromisso</button>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ typeIsRepeaterTeam }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-direction:column;gap:12px;max-height:380px;overflow-y:auto;padding-right:4px;">
+          <sc-for list="{{ team }}" as="tm" hint-placeholder-count="2">
+            <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:16px;display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:10px;align-items:center;">
+              <input value="{{ tm.name }}" onChange="{{ tm.onNameChange }}" placeholder="Nome" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:#f8fafc;font-size:12.5px;padding:8px;box-sizing:border-box;"></input>
+              <input value="{{ tm.role }}" onChange="{{ tm.onRoleChange }}" placeholder="Cargo" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:#f8fafc;font-size:12.5px;padding:8px;box-sizing:border-box;"></input>
+              <div style="position:relative;">
+                <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;color:#64748b;">R$</span>
+                <input value="{{ tm.costDisplay }}" onChange="{{ tm.onCostChange }}" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:7px;color:#f8fafc;font-size:12.5px;padding:8px 8px 8px 26px;box-sizing:border-box;"></input>
+              </div>
+              <button onClick="{{ tm.onRemove }}" style="background:transparent;border:none;color:#64748b;cursor:pointer;font-size:12px;">Remover</button>
+            </div>
+          </sc-for>
+          <button onClick="{{ addTeamMember }}" style="border:1.5px dashed rgba(255,255,255,0.16);background:transparent;border-radius:12px;padding:12px;color:#94a3b8;font-size:12.5px;font-weight:600;cursor:pointer;">+ Adicionar membro</button>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:32px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);">
+      <button onClick="{{ onBack }}" style="{{ backButtonStyle }}">← Voltar</button>
+      <button onClick="{{ onNext }}" style="background:linear-gradient(135deg,#6366f1,#4f46e5);border:none;color:#fff;font-size:13px;font-weight:700;padding:12px 26px;border-radius:10px;cursor:pointer;box-shadow:0 8px 24px -8px rgba(79,70,229,0.6);">{{ nextLabel }}</button>
+    </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  pillarDefs = [
+    { id: 'R1', category: 'R', text: 'Emagrecimento acelerado e sustentável sem efeito sanfona' },
+    { id: 'R2', category: 'R', text: 'Ganho de massa magra e hipertrofia muscular direcionada' },
+    { id: 'R3', category: 'R', text: 'Reversão de exames alterados e controle de patologias/metabolismo' },
+    { id: 'R4', category: 'R', text: 'Alta performance esportiva e rendimento físico de elite' },
+    { id: 'E1', category: 'E', text: 'Acolhimento humanizado sem julgamentos e escuta empática' },
+    { id: 'E2', category: 'E', text: 'Reeducação alimentar suave adaptada à rotina e preferências reais' },
+    { id: 'E3', category: 'E', text: 'Autonomia alimentar e relação saudável, leve e livre com a comida' }
+  ];
+
+  deliveryDefs = [
+    { id: 'kit', label: 'Kit de Boas-vindas' },
+    { id: 'consultaInicial', label: 'Consulta Inicial' },
+    { id: 'avaliacaoFisica', label: 'Avaliação Física' },
+    { id: 'revisaoExames', label: 'Revisão de Exames', dependsOn: 'avaliacaoFisica' },
+    { id: 'ajustePlano', label: 'Ajuste do Plano' },
+    { id: 'materiaisApoio', label: 'Materiais de Apoio' },
+    { id: 'consultaAcompanhamento', label: 'Consulta de Acompanhamento' },
+    { id: 'relatorioEvolucao', label: 'Relatório de Evolução' },
+    { id: 'checkin', label: 'Check-in Semanal/Quinzenal' },
+    { id: 'contatoProativo', label: 'Contato Proativo' },
+    { id: 'mudancaSuplementacao', label: 'Mudança de Suplementação' }
+  ];
+
+  weekDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+  turnos = ['Manhã', 'Tarde', 'Noite'];
+
+  steps = [
+    { id: 'pillars', eixo: 0, type: 'rank', q: 'Dos 7 pilares abaixo, ordene colocando no topo o que é a prioridade central do seu atendimento.' },
+    { id: 'fatorDecisivo', eixo: 0, type: 'choice', dynamic: true, condition: (a, p) => p[0].category !== p[1].category },
+    { id: 'personalizacaoMetodo', eixo: 0, type: 'textarea', q: 'Além da consulta individual, seu acompanhamento inclui trabalho em grupo ou comunidades?' },
+    { id: 'ferramentaPrincipal', eixo: 0, type: 'text', q: 'Qual é a ferramenta ou pilar técnico principal que você utiliza nas suas condutas?' },
+    { id: 'queixaComum', eixo: 0, type: 'textarea', q: 'Qual é a maior reclamação ou dor recorrente que os pacientes relatam antes de te procurar?' },
+    { id: 'passoAPasso', eixo: 0, type: 'textarea', q: 'Resuma em poucas palavras o passo a passo do seu método de acompanhamento.' },
+    { id: 'taxaSucesso', eixo: 0, type: 'slider', q: 'De 0 a 10, qual a sua percepção da taxa de sucesso dos pacientes em atingir o objetivo principal?', min: 0, max: 10, suffix: ' / 10' },
+
+    { id: 'canais', eixo: 1, type: 'multi', q: 'Quais canais você utiliza ativamente para captar novos pacientes?', choices: ['Instagram', 'Google Ads / SEO', 'Indicação de Pacientes', 'Parcerias Médicas / Academias', 'Eventos / Palestras', 'Outros'] },
+    { id: 'leadsConversao', eixo: 1, type: 'perChannel', q: 'Para cada canal, quantos leads chegam por mês e qual a taxa de conversão em consulta/plano?', condition: a => (a.canais || []).length > 0 },
+    { id: 'diasMarketing', eixo: 1, type: 'slider', q: 'Quantos dias por semana você dedica tempo para marketing/redes sociais?', min: 0, max: 7, suffix: ' dias' },
+    { id: 'horasConteudo', eixo: 1, type: 'text', q: 'Quantas horas por dia são gastas com criação de conteúdo?', placeholder: '0', inputType: 'number' },
+    { id: 'usaApp', eixo: 1, type: 'choice', q: 'Você utiliza algum software de agendamento online automático?', choices: ['Sim', 'Não', 'Não sei'] },
+    { id: 'appNome', eixo: 1, type: 'text', q: 'Qual o nome do software/aplicativo?', condition: a => a.usaApp === 'Sim' },
+
+    { id: 'usaScript', eixo: 2, type: 'choice', q: 'Você segue um script/roteiro padronizado na hora de apresentar o preço e fechar?', choices: ['Sim', 'Não', 'Não sei'] },
+    { id: 'canalFechamento', eixo: 2, type: 'choice', q: 'Onde a venda é finalizada na maioria das vezes?', choices: ['Mensagem (WhatsApp/DM)', 'Chamada de Vídeo / Reunião', 'Ambos'] },
+    { id: 'usaCRM', eixo: 2, type: 'choice', q: 'Você utiliza algum CRM para organizar a esteira de vendas e contatos?', choices: ['Sim', 'Não', 'Não sei'] },
+    { id: 'crmNome', eixo: 2, type: 'text', q: 'Qual o CRM utilizado?', condition: a => a.usaCRM === 'Sim' },
+    { id: 'responsavelFechamento', eixo: 2, type: 'choice', q: 'Quem é a pessoa responsável por fazer a oferta e fechar as vendas?', choices: ['Eu mesma(o)', 'Outra pessoa da equipe'] },
+    { id: 'closerNome', eixo: 2, type: 'text', q: 'Nome do responsável pelo fechamento?', condition: a => a.responsavelFechamento === 'Outra pessoa da equipe' },
+    { id: 'fazFollowup', eixo: 2, type: 'choice', q: 'É feito acompanhamento ativo com contatos que pediram orçamento mas não fecharam?', choices: ['Sim', 'Não', 'Não sei'] },
+    { id: 'followupDetalhes', eixo: 2, type: 'numberMulti', q: 'Como funciona esse follow-up?', labels: ['Dias até o 1º follow-up', 'Tentativas de contato'], condition: a => a.fazFollowup === 'Sim' },
+    { id: 'tempoFechamento', eixo: 2, type: 'numberWithUnknown', q: 'Qual o tempo médio em dias entre o primeiro contato e o pagamento?' },
+    { id: 'motivosPerda', eixo: 2, type: 'multi', q: 'Quais os motivos mais comuns para o cliente não fechar?', choices: ['Preço achado alto', 'Falta de horário na agenda', 'Formato (online/presencial)', 'Decisão adiada', 'Concorrência'] },
+
+    { id: 'servicos', eixo: 3, type: 'repeater', q: 'Cadastre os serviços e planos que você oferece hoje.' },
+
+    { id: 'entregasClinicas', eixo: 4, type: 'deliveryTable', q: 'Para cada entrega clínica da sua rotina, ela está incluída? Se sim, quanto tempo consome?' },
+
+    { id: 'scheduleGrid', eixo: 5, type: 'schedule', q: 'Quais dias da semana e turnos o seu consultório está aberto para atendimento?' },
+    { id: 'compromissos', eixo: 5, type: 'repeaterCommit', q: 'Você possui compromissos fixos que travam sua agenda (aulas, pós-graduação, família)?' },
+
+    { id: 'equipe', eixo: 6, type: 'repeaterTeam', q: 'Cadastre os membros da sua equipe de apoio e seus custos mensais.' },
+
+    { id: 'faturamentoHistorico', eixo: 7, type: 'currencyMulti', q: 'Qual foi seu faturamento nos últimos meses?', labels: ['M-2', 'M-1', 'M-0'] },
+    { id: 'custosPorCategoria', eixo: 7, type: 'currencyMulti', q: 'Some seus custos fixos mensais por categoria.', labels: ['Espaço Físico', 'Pessoas & Equipe', 'Dia a Dia', 'Divulgação', 'Impostos / Docs', 'Reservas / Estudos'] },
+    { id: 'temEmprestimo', eixo: 7, type: 'choice', q: 'Possui empréstimos ativos?', choices: ['Sim', 'Não', 'Não sei'] },
+    { id: 'parcelaEmprestimo', eixo: 7, type: 'currency', q: 'Qual o valor da parcela mensal do empréstimo?', condition: a => a.temEmprestimo === 'Sim' },
+    { id: 'temDivida', eixo: 7, type: 'choice', q: 'Possui dívidas acumuladas?', choices: ['Sim', 'Não', 'Não sei'] },
+    { id: 'valorDivida', eixo: 7, type: 'currency', q: 'Qual o valor total da dívida?', condition: a => a.temDivida === 'Sim' },
+
+    { id: 'metasFaturamento', eixo: 8, type: 'currencyMulti', q: 'Quais são suas metas de faturamento para os próximos 90 dias?', labels: ['Meta 90 dias', 'M1', 'M2', 'M3'] },
+    { id: 'metaPacientes', eixo: 8, type: 'text', q: 'Quantos pacientes ativos você deseja atender simultaneamente?', placeholder: '0', inputType: 'number' },
+    { id: 'metaHoras', eixo: 8, type: 'text', q: 'Quantas horas livres por semana você quer ter garantidas na sua rotina?', placeholder: '0', inputType: 'number' }
+  ];
+
+  eixoLabels = ['Promessa & Método', 'Captação', 'Vendas', 'Serviços', 'Entrega & Rotina', 'Agenda', 'Equipe', 'Financeiro', 'Meta & Futuro'];
+
+  state = {
+    stepIdx: 0,
+    answers: { taxaSucesso: 8, taxaConversao: 30, canais: ['Instagram', 'Indicação de Pacientes'], perChannel: {} },
+    tagDraft: '',
+    pillars: [...this.pillarDefs],
+    services: [
+      { id: 1, name: 'Consulta Inicial', type: 'Consulta', price: 25000, activePatients: 8 },
+      { id: 2, name: 'Pacote Trimestral', type: 'Pacote', price: 89000, activePatients: 22 }
+    ],
+    deliveryAnswers: {},
+    schedule: {},
+    commitments: [{ id: 1, name: 'Pós-graduação', day: 'Qui', start: '19:00', end: '22:00' }],
+    team: [{ id: 1, name: 'Camila Souza', role: 'Secretária', cost: 180000 }]
+  };
+
+  fmtBRL(cents) {
+    return ((cents || 0) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  setAnswer(id, value) { this.setState(s => ({ answers: { ...s.answers, [id]: value } })); }
+  toggleMulti(id, choice) {
+    this.setState(s => {
+      const cur = s.answers[id] || [];
+      const next = cur.includes(choice) ? cur.filter(c => c !== choice) : [...cur, choice];
+      return { answers: { ...s.answers, [id]: next } };
+    });
+  }
+  addTag(id) {
+    const val = this.state.tagDraft.trim();
+    if (!val) return;
+    this.setState(s => ({ answers: { ...s.answers, [id]: [...(s.answers[id] || []), val] }, tagDraft: '' }));
+  }
+  removeTag(id, idx) { this.setState(s => ({ answers: { ...s.answers, [id]: (s.answers[id] || []).filter((_, i) => i !== idx) } })); }
+
+  movePillar(id, dir) {
+    this.setState(s => {
+      const arr = [...s.pillars];
+      const idx = arr.findIndex(p => p.id === id);
+      const swapIdx = idx + dir;
+      if (swapIdx < 0 || swapIdx >= arr.length) return null;
+      [arr[idx], arr[swapIdx]] = [arr[swapIdx], arr[idx]];
+      return { pillars: arr };
+    });
+  }
+
+  updateService(id, patch) { this.setState(s => ({ services: s.services.map(sv => sv.id === id ? { ...sv, ...patch } : sv) })); }
+  addService() { this.setState(s => ({ services: [...s.services, { id: Date.now(), name: 'Novo serviço', type: 'Consulta', price: 0, activePatients: 0 }] })); }
+  removeService(id) { this.setState(s => ({ services: s.services.filter(sv => sv.id !== id) })); }
+
+  setDelivery(id, patch) { this.setState(s => ({ deliveryAnswers: { ...s.deliveryAnswers, [id]: { ...(s.deliveryAnswers[id] || {}), ...patch } } })); }
+
+  toggleSchedule(day, turno) {
+    this.setState(s => {
+      const key = day + '-' + turno;
+      const cur = s.schedule[key] || { active: false, start: '08:00', end: '12:00' };
+      return { schedule: { ...s.schedule, [key]: { ...cur, active: !cur.active } } };
+    });
+  }
+  setScheduleTime(day, turno, field, value) {
+    this.setState(s => {
+      const key = day + '-' + turno;
+      const cur = s.schedule[key] || { active: true, start: '08:00', end: '12:00' };
+      return { schedule: { ...s.schedule, [key]: { ...cur, [field]: value } } };
+    });
+  }
+
+  addCommitment() { this.setState(s => ({ commitments: [...s.commitments, { id: Date.now(), name: '', day: 'Seg', start: '08:00', end: '09:00' }] })); }
+  removeCommitment(id) { this.setState(s => ({ commitments: s.commitments.filter(c => c.id !== id) })); }
+  updateCommitment(id, patch) { this.setState(s => ({ commitments: s.commitments.map(c => c.id === id ? { ...c, ...patch } : c) })); }
+
+  addTeamMember() { this.setState(s => ({ team: [...s.team, { id: Date.now(), name: '', role: '', cost: 0 }] })); }
+  removeTeamMember(id) { this.setState(s => ({ team: s.team.filter(t => t.id !== id) })); }
+  updateTeamMember(id, patch) { this.setState(s => ({ team: s.team.map(t => t.id === id ? { ...t, ...patch } : t) })); }
+
+  getEffectiveSteps() {
+    return this.steps.filter(s => !s.condition || s.condition(this.state.answers, this.state.pillars));
+  }
+
+  goNext() { this.setState(s => ({ stepIdx: Math.min(s.stepIdx + 1, this.getEffectiveSteps().length), tagDraft: '' })); }
+  goBack() { this.setState(s => ({ stepIdx: Math.max(s.stepIdx - 1, 0), tagDraft: '' })); }
+
+  renderVals() {
+    const effective = this.getEffectiveSteps();
+    const total = effective.length;
+    const stepIdx = this.state.stepIdx;
+    const isFinished = stepIdx >= total;
+    const current = !isFinished ? effective[stepIdx] : null;
+
+    const segments = this.eixoLabels.map((label, e) => {
+      const stepsInEixo = effective.filter(s => s.eixo === e);
+      const totalInEixo = stepsInEixo.length || 1;
+      let done = 0;
+      stepsInEixo.forEach(s => {
+        const gi = effective.indexOf(s);
+        if (gi < stepIdx) done += 1; else if (gi === stepIdx) done += 0.5;
+      });
+      const pct = Math.min(100, (done / totalInEixo) * 100);
+      return { fillStyle: 'height:100%;width:' + pct + '%;background:#6366f1;border-radius:3px;transition:width 200ms;' };
+    });
+
+    const base = {
+      isFinished, isNotFinished: !isFinished, segments,
+      onBack: () => this.goBack(),
+      backButtonStyle: 'background:transparent;border:1px solid rgba(255,255,255,0.14);color:#94a3b8;font-size:13px;font-weight:600;padding:12px 22px;border-radius:10px;cursor:pointer;visibility:' + (stepIdx > 0 ? 'visible' : 'hidden') + ';'
+    };
+    if (isFinished) return base;
+
+    const eixoIdx = current.eixo;
+    const stepsInThisEixo = effective.filter(s => s.eixo === eixoIdx);
+    const posInEixo = stepsInThisEixo.indexOf(current) + 1;
+    const isLast = stepIdx === total - 1;
+    const pillStyle = (selected) => 'padding:11px 18px;border-radius:100px;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid ' + (selected ? '#6366f1' : 'rgba(255,255,255,0.14)') + ';background:' + (selected ? 'rgba(99,102,241,0.18)' : 'transparent') + ';color:' + (selected ? '#a5b4fc' : '#94a3b8') + ';';
+
+    let currentQuestion = current.q;
+    let choiceListForFator = null;
+    if (current.dynamic && current.id === 'fatorDecisivo') {
+      const catName = c => c === 'R' ? 'Resultado' : 'Experiência';
+      const top1 = this.state.pillars[0], top2 = this.state.pillars[1];
+      currentQuestion = 'Percebemos que seu 1º lugar é focado em ' + catName(top1.category) + ' e o 2º em ' + catName(top2.category) + '. Na decisão final do cliente, qual desses dois fatores costuma pesar mais para fechar?';
+      choiceListForFator = [top1, top2].map(p => ({ label: p.text, style: pillStyle(this.state.answers.fatorDecisivo === p.id), onClick: () => this.setAnswer('fatorDecisivo', p.id) }));
+    }
+
+    let extra = {
+      currentQuestion,
+      eixoEyebrow: 'EIXO 0' + (eixoIdx + 1) + ' · ' + this.eixoLabels[eixoIdx].toUpperCase(),
+      subPositionLabel: 'Pergunta ' + posInEixo + ' de ' + stepsInThisEixo.length,
+      nextLabel: isLast ? 'Concluir Retrato' : 'Continuar ↵',
+      onNext: () => this.goNext(),
+      typeIsText: current.type === 'text',
+      typeIsTextarea: current.type === 'textarea',
+      typeIsChoice: current.type === 'choice',
+      typeIsMulti: current.type === 'multi',
+      typeIsSlider: current.type === 'slider',
+      typeIsTags: current.type === 'tags',
+      typeIsCurrency: current.type === 'currency',
+      typeIsCurrencyMulti: current.type === 'currencyMulti',
+      typeIsNumberMulti: current.type === 'numberMulti',
+      typeIsNumberWithUnknown: current.type === 'numberWithUnknown',
+      typeIsPerChannel: current.type === 'perChannel',
+      typeIsDeliveryTable: current.type === 'deliveryTable',
+      typeIsSchedule: current.type === 'schedule',
+      typeIsRank: current.type === 'rank',
+      typeIsRepeater: current.type === 'repeater',
+      typeIsRepeaterCommit: current.type === 'repeaterCommit',
+      typeIsRepeaterTeam: current.type === 'repeaterTeam'
+    };
+
+    if (current.type === 'text') {
+      extra.textAnswer = this.state.answers[current.id] ?? '';
+      extra.textPlaceholder = current.placeholder || '';
+      extra.textInputType = current.inputType || 'text';
+      extra.onTextChange = e => this.setAnswer(current.id, e.target.value);
+      extra.onTextKeyDown = e => { if (e.key === 'Enter') this.goNext(); };
+    }
+    if (current.type === 'textarea') {
+      extra.textAnswer = this.state.answers[current.id] ?? '';
+      extra.textPlaceholder = current.placeholder || '';
+      extra.onTextChange = e => this.setAnswer(current.id, e.target.value);
+    }
+    if (current.type === 'choice') {
+      const selected = this.state.answers[current.id];
+      extra.choiceList = choiceListForFator || current.choices.map(c => ({ label: c, style: pillStyle(c === selected), onClick: () => this.setAnswer(current.id, c) }));
+    }
+    if (current.type === 'multi') {
+      const selectedArr = this.state.answers[current.id] || [];
+      extra.choiceList = current.choices.map(c => ({ label: c, style: pillStyle(selectedArr.includes(c)), onClick: () => this.toggleMulti(current.id, c) }));
+    }
+    if (current.type === 'slider') {
+      const val = this.state.answers[current.id] ?? current.min;
+      extra.sliderMin = current.min; extra.sliderMax = current.max; extra.sliderValue = val;
+      extra.sliderDisplay = val + (current.suffix || '');
+      extra.onSliderChange = e => this.setAnswer(current.id, parseInt(e.target.value, 10));
+    }
+    if (current.type === 'tags') {
+      const arr = this.state.answers[current.id] || [];
+      extra.tagsList = arr.map((label, idx) => ({ label, onRemove: () => this.removeTag(current.id, idx) }));
+      extra.tagDraft = this.state.tagDraft;
+      extra.onTagDraftChange = e => this.setState({ tagDraft: e.target.value });
+      extra.onTagKeyDown = e => { if (e.key === 'Enter') this.addTag(current.id); };
+    }
+    if (current.type === 'currency') {
+      const cents = this.state.answers[current.id] ?? 0;
+      extra.currencyDisplay = this.fmtBRL(cents);
+      extra.onCurrencyChange = e => { const d = e.target.value.replace(/\D/g, ''); this.setAnswer(current.id, d ? parseInt(d, 10) : 0); };
+    }
+    if (current.type === 'currencyMulti') {
+      const vals = this.state.answers[current.id] || {};
+      extra.multiList = current.labels.map(label => ({
+        label, display: this.fmtBRL(vals[label] || 0),
+        onChange: e => { const d = e.target.value.replace(/\D/g, ''); this.setAnswer(current.id, { ...vals, [label]: d ? parseInt(d, 10) : 0 }); }
+      }));
+    }
+    if (current.type === 'numberMulti') {
+      const vals = this.state.answers[current.id] || {};
+      extra.multiList = current.labels.map(label => ({
+        label, display: vals[label] ?? '',
+        onChange: e => this.setAnswer(current.id, { ...vals, [label]: e.target.value })
+      }));
+    }
+    if (current.type === 'numberWithUnknown') {
+      const unknown = this.state.answers[current.id + 'Unknown'] || false;
+      extra.textAnswer = this.state.answers[current.id] ?? '';
+      extra.onTextChange = e => this.setAnswer(current.id, e.target.value);
+      extra.unknownChecked = unknown;
+      extra.unknownOpacity = unknown ? 0.4 : 1;
+      extra.onUnknownToggle = () => this.setAnswer(current.id + 'Unknown', !unknown);
+    }
+    if (current.type === 'perChannel') {
+      const list = this.state.answers.canais || [];
+      const perChannel = this.state.answers.perChannel || {};
+      extra.channelRows = list.map(ch => ({
+        label: ch,
+        leads: perChannel[ch]?.leads ?? '',
+        conv: perChannel[ch]?.conv ?? '',
+        onLeadsChange: e => this.setAnswer('perChannel', { ...perChannel, [ch]: { ...(perChannel[ch] || {}), leads: e.target.value } }),
+        onConvChange: e => this.setAnswer('perChannel', { ...perChannel, [ch]: { ...(perChannel[ch] || {}), conv: e.target.value } })
+      }));
+    }
+    if (current.type === 'deliveryTable') {
+      const da = this.state.deliveryAnswers;
+      const visible = this.deliveryDefs.filter(d => !d.dependsOn || (da[d.dependsOn] && da[d.dependsOn].included === 'Sim'));
+      extra.deliveryRows = visible.map(d => {
+        const cur = da[d.id] || { included: undefined, duration: 0 };
+        return {
+          label: d.label,
+          showDuration: cur.included === 'Sim',
+          duration: cur.duration || 0,
+          onDurationChange: e => this.setDelivery(d.id, { duration: parseInt(e.target.value, 10) || 0 }),
+          options: ['Sim', 'Não', 'Não sei'].map(opt => ({
+            label: opt,
+            style: 'padding:6px 12px;border-radius:100px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid ' + (cur.included === opt ? '#6366f1' : 'rgba(255,255,255,0.14)') + ';background:' + (cur.included === opt ? 'rgba(99,102,241,0.18)' : 'transparent') + ';color:' + (cur.included === opt ? '#a5b4fc' : '#94a3b8') + ';',
+            onClick: () => this.setDelivery(d.id, { included: opt })
+          }))
+        };
+      });
+    }
+    if (current.type === 'schedule') {
+      extra.scheduleDays = this.weekDays.map(day => {
+        const turnos = this.turnos.map(turno => {
+          const key = day + '-' + turno;
+          const cur = this.state.schedule[key] || { active: false };
+          return { label: turno, style: 'padding:6px 12px;border-radius:100px;font-size:11.5px;font-weight:600;cursor:pointer;border:1px solid ' + (cur.active ? '#6366f1' : 'rgba(255,255,255,0.14)') + ';background:' + (cur.active ? 'rgba(99,102,241,0.18)' : 'transparent') + ';color:' + (cur.active ? '#a5b4fc' : '#94a3b8') + ';', onToggle: () => this.toggleSchedule(day, turno) };
+        });
+        const activeRanges = this.turnos.filter(turno => (this.state.schedule[day + '-' + turno] || {}).active).map(turno => {
+          const key = day + '-' + turno;
+          const cur = this.state.schedule[key] || { start: '08:00', end: '12:00' };
+          return { label: turno, start: cur.start || '08:00', end: cur.end || '12:00', onStartChange: e => this.setScheduleTime(day, turno, 'start', e.target.value), onEndChange: e => this.setScheduleTime(day, turno, 'end', e.target.value) };
+        });
+        return { name: day, turnos, activeRanges };
+      });
+    }
+    if (current.type === 'rank') {
+      extra.pillars = this.state.pillars.map((p, i) => ({ ...p, rank: i + 1, onUp: () => this.movePillar(p.id, -1), onDown: () => this.movePillar(p.id, 1) }));
+    }
+    if (current.type === 'repeater') {
+      extra.services = this.state.services.map(svc => ({
+        ...svc, priceDisplay: this.fmtBRL(svc.price),
+        onNameChange: e => this.updateService(svc.id, { name: e.target.value }),
+        onTypeChange: e => this.updateService(svc.id, { type: e.target.value }),
+        onPriceChange: e => { const d = e.target.value.replace(/\D/g, ''); this.updateService(svc.id, { price: d ? parseInt(d, 10) : 0 }); },
+        onPatientsChange: e => { const d = e.target.value.replace(/\D/g, ''); this.updateService(svc.id, { activePatients: d ? parseInt(d, 10) : 0 }); },
+        onRemove: () => this.removeService(svc.id)
+      }));
+      extra.addService = () => this.addService();
+    }
+    if (current.type === 'repeaterCommit') {
+      extra.weekDayOptions = this.weekDays;
+      extra.commitments = this.state.commitments.map(cm => ({
+        ...cm,
+        onNameChange: e => this.updateCommitment(cm.id, { name: e.target.value }),
+        onDayChange: e => this.updateCommitment(cm.id, { day: e.target.value }),
+        onStartChange: e => this.updateCommitment(cm.id, { start: e.target.value }),
+        onEndChange: e => this.updateCommitment(cm.id, { end: e.target.value }),
+        onRemove: () => this.removeCommitment(cm.id)
+      }));
+      extra.addCommitment = () => this.addCommitment();
+    }
+    if (current.type === 'repeaterTeam') {
+      extra.team = this.state.team.map(tm => ({
+        ...tm, costDisplay: this.fmtBRL(tm.cost),
+        onNameChange: e => this.updateTeamMember(tm.id, { name: e.target.value }),
+        onRoleChange: e => this.updateTeamMember(tm.id, { role: e.target.value }),
+        onCostChange: e => { const d = e.target.value.replace(/\D/g, ''); this.updateTeamMember(tm.id, { cost: d ? parseInt(d, 10) : 0 }); },
+        onRemove: () => this.removeTeamMember(tm.id)
+      }));
+      extra.addTeamMember = () => this.addTeamMember();
+    }
+
+    return { ...base, ...extra };
+  }
+}
+</script>
+</body>
+</html>

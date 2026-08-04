@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com"></link>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"></link>
+<style>
+  body{margin:0;background:#05070a;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  ::selection{background:rgba(99,102,241,0.35);}
+  input:focus,select:focus{outline:none;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+</style>
+</helmet>
+
+<div style="position:relative;min-height:100vh;background:#05070a;overflow:hidden;color:#e2e8f0;">
+  <div style="position:absolute;top:-120px;left:-80px;width:520px;height:520px;background:rgba(79,70,229,0.22);filter:blur(100px);border-radius:50%;pointer-events:none;"></div>
+  <div style="position:absolute;top:280px;right:-160px;width:480px;height:480px;background:rgba(16,185,129,0.10);filter:blur(100px);border-radius:50%;pointer-events:none;"></div>
+
+  <div style="position:relative;z-index:1;max-width:1360px;margin:0 auto;padding:28px 40px 80px;">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:36px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#6366f1,#4f46e5);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;">A3</div>
+        <div style="font-weight:700;font-size:15px;color:#f8fafc;letter-spacing:-0.01em;">Sistema A3</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#a5b4fc;background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.25);padding:6px 12px;border-radius:100px;">Fase 1 · O Retrato</div>
+        <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#e2e8f0;">MC</div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:flex-start;gap:2px;margin-bottom:44px;overflow-x:auto;padding-bottom:6px;">
+      <sc-for list="{{ steps }}" as="step" hint-placeholder-count="9">
+        <div style="display:flex;align-items:center;flex:1;min-width:88px;">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:8px;flex-shrink:0;">
+            <div style="{{ step.circleStyle }}">{{ step.marker }}</div>
+            <div style="{{ step.labelStyle }}">{{ step.label }}</div>
+          </div>
+          <div style="{{ step.lineStyle }}"></div>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 340px;gap:32px;align-items:start;">
+
+      <sc-if value="{{ isPromessa }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="display:inline-flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#818cf8;margin-bottom:18px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:#6366f1;"></span>
+          Eixo 01 · Promessa &amp; Método
+        </div>
+        <h1 style="margin:0 0 10px;font-size:32px;font-weight:800;color:#f8fafc;letter-spacing:-0.02em;line-height:1.15;">O que você promete entregar ao paciente?</h1>
+        <p style="margin:0 0 32px;font-size:15px;color:#94a3b8;line-height:1.6;max-width:560px;">Ordene os pilares pela ênfase que você dá hoje na prática — do mais para o menos presente — e descreva seu método.</p>
+
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:28px;">
+          <sc-for list="{{ pillars }}" as="p" hint-placeholder-count="7">
+            <div style="display:flex;align-items:center;gap:14px;background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:14px 16px;">
+              <div style="width:26px;height:26px;border-radius:50%;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:#a5b4fc;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ p.rank }}</div>
+              <div style="flex:1;font-size:14px;font-weight:600;color:#e2e8f0;">{{ p.name }}</div>
+              <div style="display:flex;gap:4px;">
+                <button onClick="{{ p.onUp }}" style="background:transparent;border:1px solid rgba(255,255,255,0.12);color:#94a3b8;width:26px;height:26px;border-radius:7px;cursor:pointer;font-size:12px;">↑</button>
+                <button onClick="{{ p.onDown }}" style="background:transparent;border:1px solid rgba(255,255,255,0.12);color:#94a3b8;width:26px;height:26px;border-radius:7px;cursor:pointer;font-size:12px;">↓</button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+          <div style="background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:20px;">
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;margin-bottom:10px;">Método principal</div>
+            <input value="{{ metodoPrincipal }}" onChange="{{ onMetodoChange }}" placeholder="Ex: Low Carb, Cetogênica, Reeducação..." style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f8fafc;font-size:14px;font-weight:600;padding:10px 12px;box-sizing:border-box;"></input>
+          </div>
+          <div style="background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:20px;">
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;margin-bottom:10px;">Fator decisivo de compra</div>
+            <select value="{{ fatorDecisivo }}" onChange="{{ onFatorChange }}" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e2e8f0;font-size:13px;padding:10px 12px;color-scheme:dark;">
+              <option value="Preço" style="background:#12141a;color:#e2e8f0;">Preço</option>
+              <option value="Resultado clínico" style="background:#12141a;color:#e2e8f0;">Resultado clínico</option>
+              <option value="Experiência do paciente" style="background:#12141a;color:#e2e8f0;">Experiência do paciente</option>
+              <option value="Indicação" style="background:#12141a;color:#e2e8f0;">Indicação</option>
+              <option value="Conveniência de agenda" style="background:#12141a;color:#e2e8f0;">Conveniência de agenda</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:20px;margin-bottom:28px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;">
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;">Taxa de sucesso percebida</div>
+            <div style="font-size:20px;font-weight:800;color:#34d399;">{{ taxaSucesso }}<span style="font-size:12px;color:#64748b;font-weight:600;"> / 10</span></div>
+          </div>
+          <input type="range" min="0" max="10" step="1" value="{{ taxaSucesso }}" onChange="{{ onTaxaChange }}" style="width:100%;accent-color:#6366f1;"></input>
+        </div>
+
+        <div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;margin-bottom:12px;">Queixas mais comuns</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <sc-for list="{{ queixas }}" as="q" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:8px;background:rgba(245,158,11,0.1);border:1px solid rgba(251,191,36,0.25);color:#fbbf24;font-size:12.5px;font-weight:600;padding:7px 12px;border-radius:100px;">
+                {{ q.label }}
+                <button onClick="{{ q.onRemove }}" style="background:transparent;border:none;color:#fbbf24;cursor:pointer;font-size:13px;padding:0;line-height:1;">×</button>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ isServicos }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <div style="display:inline-flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#818cf8;margin-bottom:18px;">
+          <span style="width:6px;height:6px;border-radius:50%;background:#6366f1;"></span>
+          Eixo 04 · Serviços
+        </div>
+        <h1 style="margin:0 0 10px;font-size:32px;font-weight:800;color:#f8fafc;letter-spacing:-0.02em;line-height:1.15;">Quais serviços você oferece hoje?</h1>
+        <p style="margin:0 0 32px;font-size:15px;color:#94a3b8;line-height:1.6;max-width:560px;">Cadastre cada consulta, pacote ou plano ativo. Preço, formato e pacientes ativos alimentam o cálculo de ticket médio e o Motor de Simulação na Call 2.</p>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <sc-for list="{{ services }}" as="svc" hint-placeholder-count="3">
+            <div style="background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:22px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+                <input value="{{ svc.name }}" onChange="{{ svc.onNameChange }}" placeholder="Nome do serviço" style="background:transparent;border:none;color:#f8fafc;font-size:16px;font-weight:700;padding:0;width:70%;"></input>
+                <button onClick="{{ svc.onRemove }}" style="background:transparent;border:none;color:#64748b;cursor:pointer;padding:4px;font-size:13px;" style-hover="color:#f43f5e;">Remover</button>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+                <div>
+                  <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;margin-bottom:6px;">Tipo</div>
+                  <select value="{{ svc.type }}" onChange="{{ svc.onTypeChange }}" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e2e8f0;font-size:13px;padding:9px 10px;color-scheme:dark;">
+                    <option value="Consulta" style="background:#12141a;color:#e2e8f0;">Consulta</option>
+                    <option value="Pacote" style="background:#12141a;color:#e2e8f0;">Pacote</option>
+                    <option value="Plano" style="background:#12141a;color:#e2e8f0;">Plano</option>
+                  </select>
+                </div>
+                <div>
+                  <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;margin-bottom:6px;">Formato</div>
+                  <select value="{{ svc.format }}" onChange="{{ svc.onFormatChange }}" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#e2e8f0;font-size:13px;padding:9px 10px;color-scheme:dark;">
+                    <option value="Presencial" style="background:#12141a;color:#e2e8f0;">Presencial</option>
+                    <option value="Online" style="background:#12141a;color:#e2e8f0;">Online</option>
+                    <option value="Híbrido" style="background:#12141a;color:#e2e8f0;">Híbrido</option>
+                  </select>
+                </div>
+                <div>
+                  <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;margin-bottom:6px;">Preço</div>
+                  <div style="position:relative;">
+                    <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:13px;color:#64748b;">R$</span>
+                    <input value="{{ svc.priceDisplay }}" onChange="{{ svc.onPriceChange }}" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f8fafc;font-size:13px;font-weight:600;padding:9px 10px 9px 30px;box-sizing:border-box;"></input>
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:#64748b;margin-bottom:6px;">Pacientes ativos</div>
+                  <input value="{{ svc.activePatients }}" onChange="{{ svc.onPatientsChange }}" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#f8fafc;font-size:13px;font-weight:600;padding:9px 10px;box-sizing:border-box;"></input>
+                </div>
+              </div>
+              <div style="display:flex;gap:18px;margin-top:14px;font-size:12px;color:#64748b;">
+                <span>Duração: <span style="color:#94a3b8;font-weight:600;">{{ svc.durationDays }} dias</span></span>
+                <span>Atendimentos: <span style="color:#94a3b8;font-weight:600;">{{ svc.sessionsIncluded }}</span></span>
+              </div>
+            </div>
+          </sc-for>
+
+          <button onClick="{{ addService }}" style="border:1.5px dashed rgba(255,255,255,0.16);background:transparent;border-radius:14px;padding:16px;color:#94a3b8;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;" style-hover="border-color:rgba(99,102,241,0.5);color:#a5b4fc;background:rgba(99,102,241,0.06);">
+            <span style="font-size:16px;line-height:1;">+</span> Adicionar serviço
+          </button>
+        </div>
+      </div>
+      </sc-if>
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:40px;padding-top:24px;border-top:1px solid rgba(255,255,255,0.08);grid-column:1;">
+          <button style="background:transparent;border:1px solid rgba(255,255,255,0.14);color:#94a3b8;font-size:13px;font-weight:600;padding:12px 22px;border-radius:10px;cursor:pointer;">Voltar</button>
+          <button style="background:linear-gradient(135deg,#6366f1,#4f46e5);border:none;color:#fff;font-size:13px;font-weight:700;padding:12px 26px;border-radius:10px;cursor:pointer;box-shadow:0 8px 24px -8px rgba(79,70,229,0.6);">Salvar e continuar</button>
+        </div>
+
+      <sc-if value="{{ showSummary }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-direction:column;gap:16px;position:sticky;top:28px;">
+          <sc-if value="{{ isPromessa }}" hint-placeholder-val="{{ false }}">
+          <div style="background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:22px;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin-bottom:18px;">Resumo do eixo</div>
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div>
+                <span style="font-size:13px;color:#94a3b8;display:block;margin-bottom:4px;">Pilar em primeiro lugar</span>
+                <span style="font-size:18px;font-weight:800;color:#f8fafc;">{{ topPillar }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                <span style="font-size:13px;color:#94a3b8;">Taxa de sucesso</span>
+                <span style="font-size:20px;font-weight:800;color:#34d399;">{{ taxaSucesso }}/10</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                <span style="font-size:13px;color:#94a3b8;">Queixas mapeadas</span>
+                <span style="font-size:20px;font-weight:800;color:#f8fafc;">{{ queixasCount }}</span>
+              </div>
+            </div>
+          </div>
+          <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:14px;padding:18px 20px;">
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <span style="width:16px;height:16px;border-radius:50%;border:1.5px solid #818cf8;color:#818cf8;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">i</span>
+              <p style="margin:0;font-size:12.5px;line-height:1.55;color:#c7d2fe;">A ordem dos pilares direciona a leitura da promessa central da prática — usada na Call 1 de alinhamento.</p>
+            </div>
+          </div>
+          </sc-if>
+          <sc-if value="{{ isServicos }}" hint-placeholder-val="{{ true }}">
+          <div style="background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:22px;">
+            <div style="font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#64748b;margin-bottom:18px;">Resumo do eixo</div>
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                <span style="font-size:13px;color:#94a3b8;">Serviços cadastrados</span>
+                <span style="font-size:20px;font-weight:800;color:#f8fafc;">{{ serviceCount }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                <span style="font-size:13px;color:#94a3b8;">Pacientes ativos</span>
+                <span style="font-size:20px;font-weight:800;color:#34d399;">{{ totalPatients }}</span>
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                <span style="font-size:13px;color:#94a3b8;">Ticket médio</span>
+                <span style="font-size:20px;font-weight:800;color:#f8fafc;">{{ avgTicketDisplay }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:14px;padding:18px 20px;">
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <span style="width:16px;height:16px;border-radius:50%;border:1.5px solid #818cf8;color:#818cf8;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">i</span>
+              <p style="margin:0;font-size:12.5px;line-height:1.55;color:#c7d2fe;">Estes dados alimentam o Motor de Simulação — Ponto de Equilíbrio e capacidade da agenda são calculados a partir daqui.</p>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;activeStepIndex&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:3,&quot;min&quot;:0,&quot;max&quot;:8,&quot;step&quot;:1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Navegação&quot;},&quot;showSummaryPanel&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Layout&quot;}}">
+class Component extends DCLogic {
+  state = {
+    pillars: [
+      { id: 1, name: 'Resultado clínico mensurável' },
+      { id: 2, name: 'Experiência do paciente' },
+      { id: 3, name: 'Relacionamento e suporte contínuo' },
+      { id: 4, name: 'Personalização do plano' },
+      { id: 5, name: 'Praticidade / conveniência' },
+      { id: 6, name: 'Preço acessível' },
+      { id: 7, name: 'Credibilidade / autoridade' }
+    ],
+    metodoPrincipal: 'Reeducação alimentar low carb',
+    fatorDecisivo: 'Resultado clínico',
+    taxaSucesso: 8,
+    queixas: [
+      { id: 1, label: 'Efeito platô no peso' },
+      { id: 2, label: 'Falta de adesão ao plano' },
+      { id: 3, label: 'Ansiedade / compulsão alimentar' },
+      { id: 4, label: 'Falta de tempo para cozinhar' }
+    ],
+    services: [
+      { id: 1, name: 'Consulta Inicial', type: 'Consulta', format: 'Online', price: 25000, activePatients: 8, durationDays: 30, sessionsIncluded: 1 },
+      { id: 2, name: 'Pacote Trimestral', type: 'Pacote', format: 'Híbrido', price: 89000, activePatients: 22, durationDays: 90, sessionsIncluded: 4 },
+      { id: 3, name: 'Plano Anual Premium', type: 'Plano', format: 'Presencial', price: 320000, activePatients: 6, durationDays: 365, sessionsIncluded: 12 }
+    ]
+  };
+
+  fmtBRL(cents) {
+    return (cents / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  updateService(id, patch) {
+    this.setState(s => ({ services: s.services.map(sv => sv.id === id ? { ...sv, ...patch } : sv) }));
+  }
+
+  addService() {
+    this.setState(s => ({
+      services: [...s.services, { id: Date.now(), name: 'Novo serviço', type: 'Consulta', format: 'Online', price: 0, activePatients: 0, durationDays: 30, sessionsIncluded: 1 }]
+    }));
+  }
+
+  removeService(id) {
+    this.setState(s => ({ services: s.services.filter(sv => sv.id !== id) }));
+  }
+
+  movePillar(id, dir) {
+    this.setState(s => {
+      const arr = [...s.pillars];
+      const idx = arr.findIndex(p => p.id === id);
+      const swapIdx = idx + dir;
+      if (swapIdx < 0 || swapIdx >= arr.length) return null;
+      [arr[idx], arr[swapIdx]] = [arr[swapIdx], arr[idx]];
+      return { pillars: arr };
+    });
+  }
+
+  removeQueixa(id) {
+    this.setState(s => ({ queixas: s.queixas.filter(q => q.id !== id) }));
+  }
+
+  renderVals() {
+    const stepLabels = ['Promessa', 'Captação', 'Vendas', 'Serviços', 'Entrega', 'Agenda', 'Equipe', 'Financeiro', 'Meta'];
+    const activeIdx = this.props.activeStepIndex ?? 3;
+    const steps = stepLabels.map((label, i) => {
+      const isDone = i < activeIdx;
+      const isActive = i === activeIdx;
+      let circleStyle = 'width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;';
+      let labelStyle = 'font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap;';
+      if (isDone) {
+        circleStyle += 'background:#6366f1;color:#fff;border:1px solid #6366f1;';
+        labelStyle += 'color:#94a3b8;';
+      } else if (isActive) {
+        circleStyle += 'background:transparent;color:#fff;border:1.5px solid #6366f1;box-shadow:0 0 0 4px rgba(99,102,241,0.15);';
+        labelStyle += 'color:#e2e8f0;';
+      } else {
+        circleStyle += 'background:transparent;color:#475569;border:1px solid rgba(255,255,255,0.14);';
+        labelStyle += 'color:#475569;';
+      }
+      const lineStyle = 'height:1px;flex:1;margin:0 4px;background:' + (i < activeIdx ? '#6366f1' : 'rgba(255,255,255,0.1)') + ';' + (i === stepLabels.length - 1 ? 'display:none;' : '');
+      return { label, marker: isDone ? '✓' : String(i + 1), circleStyle, labelStyle, lineStyle };
+    });
+
+    const services = this.state.services.map(svc => ({
+      ...svc,
+      priceDisplay: this.fmtBRL(svc.price),
+      onNameChange: e => this.updateService(svc.id, { name: e.target.value }),
+      onTypeChange: e => this.updateService(svc.id, { type: e.target.value }),
+      onFormatChange: e => this.updateService(svc.id, { format: e.target.value }),
+      onPriceChange: e => {
+        const digits = e.target.value.replace(/\D/g, '');
+        this.updateService(svc.id, { price: digits ? parseInt(digits, 10) : 0 });
+      },
+      onPatientsChange: e => {
+        const digits = e.target.value.replace(/\D/g, '');
+        this.updateService(svc.id, { activePatients: digits ? parseInt(digits, 10) : 0 });
+      },
+      onRemove: () => this.removeService(svc.id)
+    }));
+
+    const totalPatients = this.state.services.reduce((a, s) => a + (s.activePatients || 0), 0);
+    const totalRevenue = this.state.services.reduce((a, s) => a + s.price * s.activePatients, 0);
+    const avgTicket = totalPatients > 0 ? totalRevenue / totalPatients : 0;
+
+    const pillars = this.state.pillars.map((p, i) => ({
+      ...p,
+      rank: i + 1,
+      onUp: () => this.movePillar(p.id, -1),
+      onDown: () => this.movePillar(p.id, 1)
+    }));
+
+    const queixas = this.state.queixas.map(q => ({ ...q, onRemove: () => this.removeQueixa(q.id) }));
+
+    return {
+      steps,
+      isPromessa: activeIdx === 0,
+      isServicos: activeIdx !== 0,
+      pillars,
+      topPillar: this.state.pillars[0] ? this.state.pillars[0].name : '',
+      metodoPrincipal: this.state.metodoPrincipal,
+      onMetodoChange: e => this.setState({ metodoPrincipal: e.target.value }),
+      fatorDecisivo: this.state.fatorDecisivo,
+      onFatorChange: e => this.setState({ fatorDecisivo: e.target.value }),
+      taxaSucesso: this.state.taxaSucesso,
+      onTaxaChange: e => this.setState({ taxaSucesso: parseInt(e.target.value, 10) }),
+      queixas,
+      queixasCount: this.state.queixas.length,
+      services,
+      addService: () => this.addService(),
+      serviceCount: this.state.services.length,
+      totalPatients,
+      avgTicketDisplay: 'R$ ' + this.fmtBRL(avgTicket),
+      showSummary: this.props.showSummaryPanel ?? true
+    };
+  }
+}
+</script>
+</body>
+</html>

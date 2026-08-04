@@ -1,0 +1,22 @@
+:root{
+--font-display:'Anton',Impact,sans-serif;
+--font-subtitle:'Montserrat',sans-serif;
+--font-body:'Inter',sans-serif;
+--text-question:clamp(2.75rem,7vw,5.75rem);
+--text-display:clamp(2rem,5vw,3.25rem);
+--text-h1:2rem;
+--text-h2:1.5rem;
+--text-h3:1.125rem;
+--text-body-lg:1.125rem;
+--text-body:1rem;
+--text-small:0.875rem;
+--text-label:0.75rem;
+--lh-tight:0.98; /* @kind other */
+--lh-snug:1.15; /* @kind other */
+--lh-normal:1.5; /* @kind other */
+--lh-relaxed:1.65; /* @kind other */
+--tracking-tight:-0.01em;
+--tracking-normal:0;
+--tracking-wide:0.06em;
+--tracking-wider:0.12em;
+}
