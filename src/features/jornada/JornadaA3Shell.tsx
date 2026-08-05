@@ -21,6 +21,7 @@ import Fase01Flow from '../fase01/Fase01Flow';
 import Fase02Flow from '../fase02/Fase02Flow';
 import Fase03Flow from '../fase03/Fase03Flow';
 import Fase04Flow from '../fase04/Fase04Flow';
+import Fase09Flow from '../fase09/Fase09Flow';
 import FaseNaoImplementada from './FaseNaoImplementada';
 
 // ---------------------------------------------------------------------------
@@ -427,8 +428,11 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
             uid={uid}
             initialState={clientRecord?.fase04 ?? null}
           />
+        ) : faseFocada === 'fase09_metas_simulacao' ? (
+          // Fase 09 — Metas & Simulação (Mesa de Controle Viva)
+          <Fase09Flow uid={uid} clientRecord={clientRecord} />
         ) : (
-          // Fases 5-9 — placeholder
+          // Fases 5-8 — placeholder
           <FaseNaoImplementada
             nome={etapaFocada?.nome ?? ''}
             subtitulo={etapaFocada?.subtitulo ?? ''}

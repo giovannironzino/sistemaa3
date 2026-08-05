@@ -571,3 +571,19 @@ export type {
   Fase03State,
   ResumoComercial,
 } from './features/fase03/fase03.types';
+
+// ---------------------------------------------------------------------------
+// Fase 09 — Metas & Simulação (re-export from feature module)
+// ---------------------------------------------------------------------------
+export type {
+  FormaRecebimentoId,
+  TipoApoioId,
+  EscolhaCaminhoId,
+  PresetDistribuicaoId,
+  Fase09Assumptions,
+  DistribuicaoServico,
+  OfertaEcossistema,
+  SimuladorState,
+  ResultadoSimulado,
+  ResumoSimulacaoEixo09,
+} from './features/fase09/eixo09.types';
