@@ -10,9 +10,13 @@ export type CanalOrigemId =
   | 'trafego_pago'
   | 'parcerias_medicas'
   | 'eventos_presenciais'
-  | 'busca_video_curto';
+  | 'busca_video_curto'
+  | 'nao_rastreado'; // NOVO — Emenda de Reconciliação com Prontuário: "Não sei / não lembro por onde essa pessoa chegou"
 
 export type StatusFechamento = 'sim' | 'nao';
+
+// NOVO — Emenda de Reconciliação com Prontuário
+export type OrigemRegistroId = 'revisao_whatsapp' | 'reconciliacao_prontuario';
 
 export interface ContatoCaptacao {
   id: string;                          // uuid gerado no cliente
@@ -27,6 +31,12 @@ export interface ContatoCaptacao {
   sabeQualParceiro?: boolean;          // presente somente se canalOrigem === 'parcerias_medicas'
   criadoEm: string;                    // timestamp ISO de criação
   atualizadoEm: string;                // timestamp ISO da última edição
+
+  // NOVO CAMPO — Emenda de Reconciliação com Prontuário. Obrigatório para todo
+  // contato criado a partir desta emenda em diante. Registros antigos (anteriores
+  // a esta emenda) não possuem este campo — tratar ausência como 'revisao_whatsapp'
+  // apenas para fins de exibição, sem reescrever o documento (ver seção 4.5).
+  origemRegistro: OrigemRegistroId;
 }
 
 export interface Fase02State {
@@ -37,6 +47,10 @@ export interface Fase02State {
   travaConfirmada: boolean;            // true após confirmação da Tela 4
   fase02Completa: boolean;             // true após exibir a Tela Final com sucesso
   atualizadoEm: string;                // timestamp ISO da última gravação desta fase (A.4 / A.4.1)
+
+  // NOVOS CAMPOS — Emenda de Reconciliação com Prontuário
+  totalPacientesSistemaProntuario: number | null;  // resposta da nova pergunta na Tela 4, opcional
+  reconciliacaoPendenteQuantidade: number;         // calculado — 0 se não houver diferença a reconciliar
 }
 
 // ESTE BLOCO SERÁ CONSUMIDO POR EIXOS FUTUROS — nomes travados, não alterar
@@ -45,7 +59,7 @@ export interface ResumoCaptacao {
   totalConvertidos: number;                        // statusFechamento === 'sim'
   totalNaoConvertidos: number;                      // statusFechamento === 'nao'
   taxaConversaoGeral: number;                       // totalConvertidos / totalContatos, em %, 1 casa decimal
-  rankingCanaisPorVolume: RankingCanal[];            // todos os 9 canais, ordenados do maior pro menor volume total
+  rankingCanaisPorVolume: RankingCanal[];            // todos os canais (10, incl. 'nao_rastreado'), ordenados do maior pro menor volume total
   taxaConversaoPorCanal: TaxaConversaoCanal[];       // ver regra dos 10 leads, seção 6.4
   canaisCampeoes: CanalOrigemId[];                   // os 3 canais com maior totalConvertidos (não volume) — consumido pelo Eixo 06 e Eixo 09 como "Canais_Campeoes_Lista"
   topIndicadores: RankingNome[];                     // ranking de nomes em nomeIndicador, do que mais trouxe gente pro que menos trouxe

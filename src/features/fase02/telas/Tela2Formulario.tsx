@@ -35,6 +35,10 @@ interface Tela2FormularioProps {
   dataEmRevisao: string;                 // ISO YYYY-MM-DD
   contatoEditando?: ContatoCaptacao;     // undefined = criação, definido = edição
   onSalvar: (contato: ContatoCaptacao) => void;
+  // NOVO — Emenda de Reconciliação com Prontuário: quando true, o campo "Status
+  // de Fechamento" não é exibido (travado em 'sim') e o contato salvo recebe
+  // origemRegistro = 'reconciliacao_prontuario' em vez do padrão 'revisao_whatsapp'.
+  modoReconciliacao?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -87,6 +91,7 @@ export default function Tela2Formulario({
   dataEmRevisao,
   contatoEditando,
   onSalvar,
+  modoReconciliacao = false,
 }: Tela2FormularioProps) {
   const [form, setForm] = useState<FormState>(() => buildInitialForm(contatoEditando));
 
@@ -102,7 +107,7 @@ export default function Tela2Formulario({
   function isFormValido(): boolean {
     if (!form.nomeContato.trim()) return false;
     if (!form.objetivoPrincipal) return false;
-    if (!form.statusFechamento) return false;
+    if (!modoReconciliacao && !form.statusFechamento) return false;
     if (!form.canalOrigem) return false;
 
     if (form.canalOrigem === 'indicacao_boca_a_boca') {
@@ -157,10 +162,11 @@ export default function Tela2Formulario({
       data: dataEmRevisao,
       nomeContato: form.nomeContato.trim(),
       objetivoPrincipal: form.objetivoPrincipal as ClusterId,
-      statusFechamento: form.statusFechamento as StatusFechamento,
+      statusFechamento: modoReconciliacao ? 'sim' : (form.statusFechamento as StatusFechamento),
       canalOrigem: form.canalOrigem as CanalOrigemId,
       criadoEm: contatoEditando?.criadoEm ?? agora,
       atualizadoEm: agora,
+      origemRegistro: modoReconciliacao ? 'reconciliacao_prontuario' : 'revisao_whatsapp',
     };
 
     // Subcampo indicação
@@ -194,12 +200,23 @@ export default function Tela2Formulario({
       <div className="space-y-3">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
           <span className="text-[10px] font-bold tracking-widest text-emerald-400 uppercase">
-            Eixo 02 · Captação · {modoEdicao ? 'Editando Contato' : 'Tela 2'}
+            Eixo 02 · Captação ·{' '}
+            {modoReconciliacao
+              ? 'Reconciliação de Prontuário'
+              : modoEdicao
+              ? 'Editando Contato'
+              : 'Tela 2'}
           </span>
         </div>
         <h1 className="text-xl font-bold text-white leading-snug">
-          Cadastrando contato do dia{' '}
-          <span className="text-emerald-400">{formatDateBR(dataEmRevisao)}</span>:
+          {modoReconciliacao ? (
+            <>Cadastrando paciente encontrado no seu sistema de prontuário:</>
+          ) : (
+            <>
+              Cadastrando contato do dia{' '}
+              <span className="text-emerald-400">{formatDateBR(dataEmRevisao)}</span>:
+            </>
+          )}
         </h1>
       </div>
 
@@ -254,7 +271,8 @@ export default function Tela2Formulario({
         </div>
       </div>
 
-      {/* Campo 3: Status de Fechamento */}
+      {/* Campo 3: Status de Fechamento — oculto em modoReconciliacao (travado em 'sim') */}
+      {!modoReconciliacao && (
       <div className="space-y-3">
         <p className="text-sm font-bold text-slate-200">3. Status de Fechamento</p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -300,6 +318,7 @@ export default function Tela2Formulario({
           })}
         </div>
       </div>
+      )}
 
       {/* Campo 4: Canal de Origem */}
       <div className="space-y-3">

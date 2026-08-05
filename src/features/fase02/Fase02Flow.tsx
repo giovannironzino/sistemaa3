@@ -33,6 +33,7 @@ type FlowStep =
   | { screen: 'tela2_edicao'; contatoId: string }
   | { screen: 'tela3' }
   | { screen: 'tela4' }
+  | { screen: 'tela2_reconciliacao'; index: number }
   | { screen: 'tela_final' };
 
 // ---------------------------------------------------------------------------
@@ -62,6 +63,8 @@ function buildInitialState(): Fase02State {
     travaConfirmada: false,
     fase02Completa: false,
     atualizadoEm: new Date().toISOString(),
+    totalPacientesSistemaProntuario: null,
+    reconciliacaoPendenteQuantidade: 0,
   };
 }
 
@@ -150,6 +153,21 @@ export default function Fase02Flow({ uid, initialState }: Fase02FlowProps) {
   const [step, setStep] = useState<FlowStep>(() => {
     if (initialState?.fase02Completa) {
       return { screen: 'tela_final' };
+    }
+    // Retomar loop de reconciliação de prontuário em andamento (caso de borda 4.3):
+    // se o nutricionista saiu no meio do cadastro das pessoas faltantes, retoma
+    // exatamente de onde parou, sem pedir para recadastrar quem já foi salvo.
+    if (
+      initialState &&
+      !initialState.travaConfirmada &&
+      initialState.reconciliacaoPendenteQuantidade > 0
+    ) {
+      const jaReconciliados = (initialState.contatos ?? []).filter(
+        (c) => c.origemRegistro === 'reconciliacao_prontuario'
+      ).length;
+      if (jaReconciliados < initialState.reconciliacaoPendenteQuantidade) {
+        return { screen: 'tela2_reconciliacao', index: jaReconciliados };
+      }
     }
     const contatos = initialState?.contatos ?? [];
     if (contatos.length > 0) return { screen: 'tela3' };
@@ -246,11 +264,31 @@ export default function Fase02Flow({ uid, initialState }: Fase02FlowProps) {
     }));
   }
 
-  // TELA 4 — confirmar (travar e calcular)
-  function handleTela4Confirmar() {
+  // TELA 4 — avançar (após a pergunta de reconciliação com prontuário)
+  // Se não houver diferença a reconciliar, sela a fase normalmente. Se houver,
+  // inicia o loop de reconciliação (Tela 2 reaproveitada em modoReconciliacao).
+  function handleTela4Avancar(
+    totalPacientesSistemaProntuario: number | null,
+    reconciliacaoPendenteQuantidade: number
+  ) {
+    if (reconciliacaoPendenteQuantidade > 0) {
+      setState((prev) => ({
+        ...prev,
+        totalPacientesSistemaProntuario,
+        reconciliacaoPendenteQuantidade,
+      }));
+      goToStep({ screen: 'tela2_reconciliacao', index: 0 });
+      return;
+    }
+
     const resumoCalculado = calcularResumoCaptacao(state.contatos);
     setResumo(resumoCalculado);
-    setState((prev) => ({ ...prev, travaConfirmada: true }));
+    setState((prev) => ({
+      ...prev,
+      totalPacientesSistemaProntuario,
+      reconciliacaoPendenteQuantidade: 0,
+      travaConfirmada: true,
+    }));
     // Persiste ResumoCaptacao separadamente para que a Fase 03 possa ler
     // totalNaoConvertidos sem recalcular — ver seção 7 da spec da Fase 03.
     persistirResumoCaptacaoFase02(uid, resumoCalculado);
@@ -260,6 +298,28 @@ export default function Fase02Flow({ uid, initialState }: Fase02FlowProps) {
   // TELA 4 — voltar para Tela 3 sem alterar dados (reaproveita o histórico genérico)
   function handleTela4Voltar() {
     handleVoltar();
+  }
+
+  // TELA 2 (reaproveitada, modoReconciliacao) — salvou um contato reconciliado
+  function handleTela2ReconciliacaoSalvar(contato: ContatoCaptacao, index: number) {
+    const proximoIndex = index + 1;
+    if (proximoIndex < state.reconciliacaoPendenteQuantidade) {
+      setState((prev) => ({ ...prev, contatos: [...prev.contatos, contato] }));
+      goToStep({ screen: 'tela2_reconciliacao', index: proximoIndex });
+      return;
+    }
+
+    // Última pessoa do loop — adiciona e sela a fase na mesma operação.
+    const contatosFinal = [...state.contatos, contato];
+    const resumoCalculado = calcularResumoCaptacao(contatosFinal);
+    setResumo(resumoCalculado);
+    setState((prev) => ({
+      ...prev,
+      contatos: contatosFinal,
+      travaConfirmada: true,
+    }));
+    persistirResumoCaptacaoFase02(uid, resumoCalculado);
+    goToStep({ screen: 'tela_final' });
   }
 
   // TELA FINAL — marcar fase02Completa
@@ -340,9 +400,26 @@ export default function Fase02Flow({ uid, initialState }: Fase02FlowProps) {
           janelaInicial={state.janelaInicial}
           janelaFinal={state.janelaFinal}
           totalContatos={state.contatos.length}
-          onConfirmar={handleTela4Confirmar}
+          totalConvertidos={state.contatos.filter((c) => c.statusFechamento === 'sim').length}
+          onAvancar={handleTela4Avancar}
           onVoltar={handleTela4Voltar}
         />
+      )}
+
+      {step.screen === 'tela2_reconciliacao' && (
+        <React.Fragment key={`reconciliacao-${step.index}`}>
+          <div className="w-full max-w-2xl mx-auto mb-3">
+            <p className="text-xs font-semibold text-sky-400 uppercase tracking-widest">
+              Reconciliação de prontuário: pessoa {step.index + 1} de{' '}
+              {state.reconciliacaoPendenteQuantidade}
+            </p>
+          </div>
+          <Tela2Formulario
+            dataEmRevisao={state.janelaFinal}
+            modoReconciliacao
+            onSalvar={(contato) => handleTela2ReconciliacaoSalvar(contato, step.index)}
+          />
+        </React.Fragment>
       )}
 
       {step.screen === 'tela_final' && resumo && (

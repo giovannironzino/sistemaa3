@@ -1,5 +1,5 @@
 // canaisOrigem.ts
-// Fonte única de dados para os 9 canais de origem da Fase 02 — Captação.
+// Fonte única de dados para os canais de origem da Fase 02 — Captação.
 
 import { CanalOrigemId } from '../fase02.types';
 
@@ -56,6 +56,11 @@ export const CANAIS_ORIGEM: CanalDef[] = [
   {
     id: 'busca_video_curto',
     label: 'Plataformas de busca e vídeos curtos (TikTok e Google)',
+    temSubcampo: false,
+  },
+  {
+    id: 'nao_rastreado',
+    label: 'Não sei / não lembro por onde essa pessoa chegou',
     temSubcampo: false,
   },
 ];
