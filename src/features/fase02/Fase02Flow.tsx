@@ -430,10 +430,33 @@ export default function Fase02Flow({ uid, initialState }: Fase02FlowProps) {
         />
       )}
 
-      {/* Fallback: tela_final sem resumo (carregamento de initialState com travaConfirmada) */}
+      {/* Fallback: tela_final sem resumo para exibir. Acontece quando fase02Completa
+          ainda é true mas os contatos foram todos excluídos depois da conclusão
+          (Tela 3 permite excluir um a um) — não há dados para gerar o veredito.
+          Em vez de travar num "carregando" infinito, avisa o usuário e permite
+          preencher o eixo novamente. */}
       {step.screen === 'tela_final' && !resumo && (
-        <div className="flex items-center justify-center py-20 text-slate-400 text-sm">
-          Carregando veredito...
+        <div className="w-full max-w-2xl mx-auto space-y-6" id="tela_final_veredito_vazio">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
+            <span className="text-[10px] font-bold tracking-widest text-amber-400 uppercase">
+              Eixo 02 · Captação · Sem dados para exibir
+            </span>
+          </div>
+          <h1 className="text-xl font-bold text-white leading-snug">
+            Não encontramos nenhum contato cadastrado para gerar o veredito desta fase.
+          </h1>
+          <p className="text-sm text-slate-400 leading-relaxed">
+            Isso normalmente acontece quando todos os contatos cadastrados foram excluídos
+            depois da conclusão do eixo. Preencha o eixo novamente para gerar um novo veredito.
+          </p>
+          <button
+            type="button"
+            id="btn_tela_final_vazio_preencher"
+            onClick={handleRevisar}
+            className="btn-primary flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl"
+          >
+            Preencher este eixo
+          </button>
         </div>
       )}
     </div>
