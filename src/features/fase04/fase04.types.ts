@@ -57,6 +57,9 @@ export interface Fase04State {
   mecanismoContinuidade: MecanismoContinuidadeId | null;
   fase04Completa: boolean;
   atualizadoEm: string;                     // timestamp ISO da última gravação desta fase (A.4 / A.4.1)
+
+  // NOVO CAMPO — Emenda de Integração Fase 04 → Eixo 09
+  taxaRenovacaoAtual: number | null;         // 0 a 100, percentual, null até ser respondido na Tela 3.1
 }
 
 // Consumido por eixos futuros (Agenda, Financeiro, Metas) — nomes travados, não alterar
@@ -72,4 +75,7 @@ export interface ResumoServicos {
   formasPagamentoAceitasUniao: FormaPagamentoId[]; // união de todas as formas de pagamento de todos os serviços, sem duplicar
   possuiMecanismoDeRetencao: boolean;       // true se mecanismoContinuidade !== 'encerramento_alta'
   mecanismoContinuidade: MecanismoContinuidadeId;
+
+  // NOVO CAMPO — Emenda de Integração Fase 04 → Eixo 09
+  taxaRenovacaoAtual: number;                // equivalente a "Taxa_Renovacao_Atual_%" do Eixo 09 — copiado direto de Fase04State.taxaRenovacaoAtual
 }

@@ -32,6 +32,7 @@ import Tela13DuracaoCarteira from './telas/Tela13DuracaoCarteira';
 import TelaDecisaoLoop from './telas/TelaDecisaoLoop';
 import Tela2CarroChefe from './telas/Tela2CarroChefe';
 import Tela3Continuidade from './telas/Tela3Continuidade';
+import Tela31TaxaRenovacao from './telas/Tela31TaxaRenovacao';
 import TelaFinalRetrato from './telas/TelaFinalRetrato';
 
 // ---------------------------------------------------------------------------
@@ -46,6 +47,7 @@ type FlowStep =
   | { screen: 'decisao_loop'; nomeCadastrado: string }
   | { screen: 'tela2_carrochefe' }
   | { screen: 'tela3_continuidade' }
+  | { screen: 'tela31_taxa_renovacao' }
   | { screen: 'tela_final' };
 
 // Rascunho do serviço em cadastro, acumulado ao longo das Telas 1.1 → 1.2 → 1.3
@@ -70,6 +72,7 @@ function buildInitialState(): Fase04State {
     mecanismoContinuidade: null,
     fase04Completa: false,
     atualizadoEm: new Date().toISOString(),
+    taxaRenovacaoAtual: null,
   };
 }
 
@@ -165,8 +168,10 @@ export default function Fase04Flow({ uid, initialState }: Fase04FlowProps) {
         return state.servicos.length >= 2
           ? { screen: 'tela2_carrochefe' }
           : { screen: 'decisao_loop', nomeCadastrado: ultimoServico.nomeComercial };
-      case 'tela_final':
+      case 'tela31_taxa_renovacao':
         return { screen: 'tela3_continuidade' };
+      case 'tela_final':
+        return { screen: 'tela31_taxa_renovacao' };
       default:
         // 'abertura' e 'decisao_loop': sem volta — decisao_loop já representa
         // um serviço commitado (B.6.5); abertura é a primeira tela da fase.
@@ -270,6 +275,12 @@ export default function Fase04Flow({ uid, initialState }: Fase04FlowProps) {
   // TELA 3 — Continuidade
   function handleTela3Avancar(mecanismo: MecanismoContinuidadeId) {
     setState((prev) => ({ ...prev, mecanismoContinuidade: mecanismo }));
+    setStep({ screen: 'tela31_taxa_renovacao' });
+  }
+
+  // TELA 3.1 — Taxa de Renovação (emenda de integração com o Eixo 09)
+  function handleTela31Avancar(taxa: number) {
+    setState((prev) => ({ ...prev, taxaRenovacaoAtual: taxa }));
     setStep({ screen: 'tela_final' });
   }
 
@@ -281,7 +292,10 @@ export default function Fase04Flow({ uid, initialState }: Fase04FlowProps) {
 
   // ─── ResumoServicos (calculado sob demanda na tela final) ────────────────
   const resumo: ResumoServicos | null =
-    state.servicos.length > 0 && state.carroChefeId && state.mecanismoContinuidade
+    state.servicos.length > 0 &&
+    state.carroChefeId &&
+    state.mecanismoContinuidade &&
+    state.taxaRenovacaoAtual !== null
       ? calcularResumoServicos(state)
       : null;
 
@@ -367,6 +381,14 @@ export default function Fase04Flow({ uid, initialState }: Fase04FlowProps) {
         <Tela3Continuidade
           initialMecanismo={state.mecanismoContinuidade}
           onAvancar={handleTela3Avancar}
+        />
+      )}
+
+      {/* Tela 3.1 — Taxa de Renovação (emenda de integração com o Eixo 09) */}
+      {step.screen === 'tela31_taxa_renovacao' && (
+        <Tela31TaxaRenovacao
+          initialTaxa={state.taxaRenovacaoAtual}
+          onAvancar={handleTela31Avancar}
         />
       )}
 

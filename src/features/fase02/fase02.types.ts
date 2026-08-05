@@ -50,6 +50,10 @@ export interface ResumoCaptacao {
   canaisCampeoes: CanalOrigemId[];                   // os 3 canais com maior totalConvertidos (não volume) — consumido pelo Eixo 06 e Eixo 09 como "Canais_Campeoes_Lista"
   topIndicadores: RankingNome[];                     // ranking de nomes em nomeIndicador, do que mais trouxe gente pro que menos trouxe
   topParceiros: RankingNome[];                       // ranking de nomes em nomeParceiro, do que mais trouxe gente pro que menos trouxe
+
+  // NOVOS CAMPOS — Emenda de Integração Fase 02 → Eixo 09
+  leadsMensaisMedia: number;                         // totalContatos / 3 (janela de 90 dias ≈ 3 meses) — equivalente a "Leads_Historicos_Mes" do Eixo 09
+  canaisAtivos: CanalOrigemId[];                     // canais com totalContatos > 0, na ordem de rankingCanaisPorVolume — equivalente a "Canais_Ativos" do Eixo 09
 }
 
 export interface RankingCanal {

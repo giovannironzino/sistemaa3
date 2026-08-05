@@ -7,7 +7,7 @@ import type { Fase04State, ResumoServicos, FormaPagamentoId } from '../fase04.ty
 import { FORMAS_PAGAMENTO } from '../data/listasFase04';
 
 export function calcularResumoServicos(state: Fase04State): ResumoServicos {
-  const { servicos, carroChefeId, mecanismoContinuidade } = state;
+  const { servicos, carroChefeId, mecanismoContinuidade, taxaRenovacaoAtual } = state;
 
   const totalServicos = servicos.length;
   const carroChefe = servicos.find((s) => s.id === carroChefeId)!;
@@ -48,5 +48,6 @@ export function calcularResumoServicos(state: Fase04State): ResumoServicos {
     formasPagamentoAceitasUniao,
     possuiMecanismoDeRetencao: mecanismoContinuidade !== 'encerramento_alta',
     mecanismoContinuidade: mecanismoContinuidade!,
+    taxaRenovacaoAtual: taxaRenovacaoAtual!,
   };
 }

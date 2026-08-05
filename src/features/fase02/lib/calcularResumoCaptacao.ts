@@ -95,6 +95,14 @@ export function calcularResumoCaptacao(contatos: ContatoCaptacao[]): ResumoCapta
     .map(([nome, vals]) => ({ nome, ...vals }))
     .sort((a, b) => b.totalContatos - a.totalContatos);
 
+  // leadsMensaisMedia — janela de captação é de 90 dias ≈ 3 meses (mesma lógica de vendasMensaisMedia na Fase 04)
+  const leadsMensaisMedia = totalContatos / 3;
+
+  // canaisAtivos — extraído de rankingCanaisPorVolume, filtrando totalContatos > 0, preservando a ordem
+  const canaisAtivos: CanalOrigemId[] = rankingCanaisPorVolume
+    .filter((r) => r.totalContatos > 0)
+    .map((r) => r.canalOrigem);
+
   return {
     totalContatos,
     totalConvertidos,
@@ -105,5 +113,7 @@ export function calcularResumoCaptacao(contatos: ContatoCaptacao[]): ResumoCapta
     canaisCampeoes,
     topIndicadores,
     topParceiros,
+    leadsMensaisMedia,
+    canaisAtivos,
   };
 }

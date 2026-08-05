@@ -125,6 +125,12 @@ export default function TelaFinalRetrato({ resumo, onComplete }: TelaFinalRetrat
             </p>
           )}
         </div>
+        <div className="bg-white/4 border border-white/10 rounded-xl px-5 py-4 flex items-center justify-between">
+          <span className="text-sm text-slate-400">Taxa de renovação atual</span>
+          <span className="text-xl font-black text-cyan-400" id="valor_taxa_renovacao_atual_resumo">
+            {resumo.taxaRenovacaoAtual}%
+          </span>
+        </div>
       </div>
 
       {/* Rodapé */}
