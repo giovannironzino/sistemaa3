@@ -12,6 +12,7 @@ import {
   ClipboardList,
   RefreshCw,
   Trophy,
+  RotateCcw,
 } from 'lucide-react';
 import type { Fase03State, ResumoComercial } from '../fase03.types';
 import {
@@ -60,13 +61,14 @@ interface TelaFinalRetratoProps {
   state: Fase03State;
   resumo: ResumoComercial;
   onComplete: () => void;
+  onRevisar: () => void; // botão "Revisar Vendas" — entra em modo de edição
 }
 
 // ---------------------------------------------------------------------------
 // Componente principal
 // ---------------------------------------------------------------------------
 
-export default function TelaFinalRetrato({ state, resumo, onComplete }: TelaFinalRetratoProps) {
+export default function TelaFinalRetrato({ state, resumo, onComplete, onRevisar }: TelaFinalRetratoProps) {
   // Marca fase como completa ao montar
   useEffect(() => {
     onComplete();
@@ -231,6 +233,19 @@ export default function TelaFinalRetrato({ state, resumo, onComplete }: TelaFina
             modelagem estratégica completa.
           </p>
         </div>
+      </div>
+
+      {/* Revisar */}
+      <div className="flex justify-end pt-2">
+        <button
+          type="button"
+          id="btn_tela_final_revisar_fase03"
+          onClick={onRevisar}
+          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 hover:text-white transition-all"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+          Revisar Vendas
+        </button>
       </div>
     </div>
   );

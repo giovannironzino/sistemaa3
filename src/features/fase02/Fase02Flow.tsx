@@ -141,17 +141,25 @@ export default function Fase02Flow({ uid, initialState }: Fase02FlowProps) {
     return base;
   });
 
-  // Modo de edição real (A.4): com contatos já existentes, reabre direto na Tela 3
-  // (painel editável); sem contatos, começa do zero na Tela 1.
+  // Se o eixo já foi concluído, abre direto no veredito (Tela Final). O usuário
+  // pode entrar em modo de edição a qualquer momento pelo botão "Revisar" da
+  // Tela Final, que reabre a Tela 3 (painel editável). Sem contatos, começa do
+  // zero na Tela 1. Usa fase02Completa (não travaConfirmada) porque uma edição
+  // posterior sem reconfirmar destrava localmente travaConfirmada, mas o eixo
+  // continua concluído para fins de navegação da Jornada.
   const [step, setStep] = useState<FlowStep>(() => {
+    if (initialState?.fase02Completa) {
+      return { screen: 'tela_final' };
+    }
     const contatos = initialState?.contatos ?? [];
     if (contatos.length > 0) return { screen: 'tela3' };
     return { screen: 'tela1' };
   });
 
-  // Resumo calculado — só preenchido após confirmação da Tela 4
+  // Resumo calculado — preenchido após confirmação da Tela 4, ou recalculado
+  // na hora se o eixo já estava concluído (mesma lógica do step acima).
   const [resumo, setResumo] = useState<ResumoCaptacao | null>(() => {
-    if (initialState?.travaConfirmada && initialState?.contatos?.length) {
+    if ((initialState?.travaConfirmada || initialState?.fase02Completa) && initialState?.contatos?.length) {
       return calcularResumoCaptacao(initialState.contatos);
     }
     return null;
@@ -259,6 +267,12 @@ export default function Fase02Flow({ uid, initialState }: Fase02FlowProps) {
     setState((prev) => ({ ...prev, fase02Completa: true }));
   }
 
+  // TELA FINAL — botão "Revisar": entra em modo de edição a partir da Tela 3
+  function handleRevisar() {
+    setHistory([]);
+    setStep({ screen: 'tela3' });
+  }
+
   // -------------------------------------------------------------------------
   // Render — máquina de estados
   // -------------------------------------------------------------------------
@@ -335,6 +349,7 @@ export default function Fase02Flow({ uid, initialState }: Fase02FlowProps) {
         <TelaFinalVeredito
           resumo={resumo}
           onComplete={handleFinalComplete}
+          onRevisar={handleRevisar}
         />
       )}
 

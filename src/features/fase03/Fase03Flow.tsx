@@ -144,9 +144,12 @@ export default function Fase03Flow({ uid, initialState, clientRecord }: Fase03Fl
 
   const [state, setStateRaw] = useState<Fase03State>(buildInitialFase03State);
 
-  // Modo de edição real (A.4): mesmo com fase03Completa === true, o fluxo sempre
-  // reabre na Tela de Abertura, permitindo navegar e alterar qualquer resposta anterior.
-  const [step, setStep] = useState<FlowStep>({ screen: 'abertura' });
+  // Se o eixo já foi concluído, abre direto no Retrato Comercial (Tela Final). O
+  // usuário pode entrar em modo de edição a qualquer momento pelo botão "Revisar"
+  // da Tela Final, que reabre a Tela de Abertura permitindo alterar qualquer resposta.
+  const [step, setStep] = useState<FlowStep>(() =>
+    initialState?.fase03Completa ? { screen: 'tela_final' } : { screen: 'abertura' }
+  );
 
   // Histórico de telas visitadas nesta sessão — permite o botão "Voltar".
   const [history, setHistory] = useState<FlowStep[]>([]);
@@ -250,6 +253,12 @@ export default function Fase03Flow({ uid, initialState, clientRecord }: Fase03Fl
     setState((prev) => ({ ...prev, fase03Completa: true }));
   }
 
+  // TELA FINAL — botão "Revisar": entra em modo de edição a partir da Tela de Abertura
+  function handleRevisar() {
+    setHistory([]);
+    setStep({ screen: 'abertura' });
+  }
+
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
@@ -328,6 +337,7 @@ export default function Fase03Flow({ uid, initialState, clientRecord }: Fase03Fl
           state={state}
           resumo={resumo}
           onComplete={handleFinalComplete}
+          onRevisar={handleRevisar}
         />
       )}
     </div>

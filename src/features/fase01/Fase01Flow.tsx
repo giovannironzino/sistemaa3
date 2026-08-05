@@ -109,10 +109,12 @@ export default function Fase01Flow({ uid, initialState }: Fase01FlowProps) {
   const [state, setStateRaw] = useState<Fase01State>(
     () => initialState ?? buildInitialState()
   );
-  // Modo de edição real (A.4): mesmo com fase01Completa === true, o fluxo sempre
-  // reabre na Tela 1 (com os valores antigos já preenchidos via initialVolumes),
-  // permitindo navegar e alterar qualquer resposta anterior.
-  const [step, setStep] = useState<FlowStep>({ screen: 'tela1' });
+  // Se o eixo já foi concluído, abre direto no resumo (Tela Final). O usuário
+  // pode entrar em modo de edição a qualquer momento pelo botão "Revisar" da
+  // Tela Final, que reabre a Tela 1 com os valores antigos já preenchidos.
+  const [step, setStep] = useState<FlowStep>(() =>
+    initialState?.fase01Completa ? { screen: 'tela_final' } : { screen: 'tela1' }
+  );
 
   // Histórico de telas visitadas nesta sessão — permite o botão "Voltar" sem
   // precisar mapear manualmente qual é a tela anterior de cada uma (o fluxo
@@ -244,6 +246,12 @@ export default function Fase01Flow({ uid, initialState }: Fase01FlowProps) {
     setState((prev) => ({ ...prev, fase01Completa: true }));
   }
 
+  // TELA FINAL — botão "Revisar": entra em modo de edição a partir da Tela 1
+  function handleRevisar() {
+    setHistory([]);
+    setStep({ screen: 'tela1' });
+  }
+
   // -------------------------------------------------------------------------
   // Helpers para recuperar dados do estado
   // -------------------------------------------------------------------------
@@ -363,6 +371,7 @@ export default function Fase01Flow({ uid, initialState }: Fase01FlowProps) {
             promessaSelecionada={getPromessaDoPublico()}
             metodoSelecionado={state.metodoSelecionado}
             onComplete={handleFinalComplete}
+            onRevisar={handleRevisar}
           />
         )}
     </div>

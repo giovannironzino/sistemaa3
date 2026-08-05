@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Info,
   Trophy,
+  RefreshCw,
 } from 'lucide-react';
 import {
   ResumoCaptacao,
@@ -65,13 +66,14 @@ function SectionHeader({
 interface TelaFinalVereditoProps {
   resumo: ResumoCaptacao;
   onComplete: () => void;
+  onRevisar: () => void; // botão "Revisar Captação" — entra em modo de edição
 }
 
 // ---------------------------------------------------------------------------
 // Componente principal
 // ---------------------------------------------------------------------------
 
-export default function TelaFinalVeredito({ resumo, onComplete }: TelaFinalVereditoProps) {
+export default function TelaFinalVeredito({ resumo, onComplete, onRevisar }: TelaFinalVereditoProps) {
   // Marcar fase como completa ao montar a tela
   useEffect(() => {
     onComplete();
@@ -336,6 +338,19 @@ export default function TelaFinalVeredito({ resumo, onComplete }: TelaFinalVered
             futuros (Agenda, Financeiro e Metas) para montar sua modelagem estratégica completa.
           </p>
         </div>
+      </div>
+
+      {/* Revisar */}
+      <div className="flex justify-end pt-2">
+        <button
+          type="button"
+          id="btn_tela_final_revisar_fase02"
+          onClick={onRevisar}
+          className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl border border-white/10 text-slate-300 hover:bg-white/5 hover:text-white transition-all"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          Revisar Captação
+        </button>
       </div>
     </div>
   );

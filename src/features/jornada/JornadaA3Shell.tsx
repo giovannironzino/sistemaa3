@@ -14,7 +14,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { CheckCircle2, Lock, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Lock } from 'lucide-react';
 
 import { FaseJornadaId, JornadaState, EtapaJornada } from './jornada.types';
 import Fase01Flow from '../fase01/Fase01Flow';
@@ -92,49 +92,6 @@ function calcularEtapas(jornadaState: JornadaState): EtapaJornada[] {
     if (etapa.id === jornadaState.faseAtualId) return { ...etapa, status: 'em_andamento' };
     return { ...etapa, status: 'bloqueada' };
   });
-}
-
-// ---------------------------------------------------------------------------
-// Helper: verifica dado desatualizado (A.4.1)
-// Retorna true se a fase ANTERIOR foi atualizada DEPOIS desta fase posterior.
-// ---------------------------------------------------------------------------
-
-function dadoDesatualizado(
-  fasePosterId: FaseJornadaId,
-  clientRecord: any
-): boolean {
-  // Mapa de dependências: fasePosterId → lista de faseAnteriorId das quais leu dados
-  const dependencias: Partial<Record<FaseJornadaId, FaseJornadaId[]>> = {
-    fase03_vendas: ['fase02_captacao'],
-    fase04_servicos: [],
-    fase05_entrega_rotina: ['fase04_servicos'],
-    fase06_agenda: [],
-    fase07_equipe: [],
-    fase08_financeiro: ['fase04_servicos'],
-    fase09_metas_simulacao: ['fase04_servicos', 'fase08_financeiro'],
-  };
-
-  const deps = dependencias[fasePosterId] ?? [];
-  if (deps.length === 0) return false;
-
-  // Campo onde cada fase guarda seu atualizadoEm
-  const atualizadoEmPorFase: Partial<Record<FaseJornadaId, string | undefined>> = {
-    fase01_promessa_metodo: clientRecord?.fase01?.atualizadoEm,
-    fase02_captacao:        clientRecord?.fase02?.atualizadoEm,
-    fase03_vendas:          clientRecord?.fase03?.atualizadoEm,
-    fase04_servicos:        clientRecord?.fase04?.atualizadoEm,
-  };
-
-  const atualizadoEmPosterior = atualizadoEmPorFase[fasePosterId];
-  if (!atualizadoEmPosterior) return false;
-
-  for (const depId of deps) {
-    const atualizadoEmAnterior = atualizadoEmPorFase[depId];
-    if (atualizadoEmAnterior && atualizadoEmAnterior > atualizadoEmPosterior) {
-      return true;
-    }
-  }
-  return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -257,10 +214,6 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
   }
 
   const etapaFocada = etapas.find((e) => e.id === faseFocada) ?? etapas[0];
-  const mostrarAvisoDesatualizado =
-    etapaFocada?.status === 'concluida' &&
-    faseFocada !== null &&
-    dadoDesatualizado(faseFocada, clientRecord);
 
   return (
     <div className="space-y-6">
@@ -387,23 +340,6 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
           })}
         </div>
       </div>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* AVISO DE DADO DESATUALIZADO (A.4.1)                                 */}
-      {/* ------------------------------------------------------------------ */}
-      {mostrarAvisoDesatualizado && (
-        <div
-          id="aviso_dado_desatualizado"
-          className="flex items-start gap-3 px-4 py-3 bg-amber-500/10 border border-amber-500/25 rounded-xl"
-        >
-          <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-xs text-amber-300 leading-relaxed">
-            ⚠️ Esta fase foi calculada com um dado de uma etapa anterior que já foi alterado depois
-            disso. Os números abaixo podem estar desatualizados. Se quiser, revise esta fase
-            novamente para atualizar os cálculos.
-          </p>
-        </div>
-      )}
 
       {/* ------------------------------------------------------------------ */}
       {/* CONTEÚDO DA FASE EM FOCO                                            */}
