@@ -37,6 +37,9 @@ export interface ContatoCaptacao {
   // a esta emenda) não possuem este campo — tratar ausência como 'revisao_whatsapp'
   // apenas para fins de exibição, sem reescrever o documento (ver seção 4.5).
   origemRegistro: OrigemRegistroId;
+
+  origemCrm?: boolean;                 // true se o contato foi cadastrado a partir da tela "faltou no CRM" da Ponte CRM
+  reconcileAdd?: boolean;              // true se o contato foi cadastrado a partir da tela de Reconciliação ("ficou faltando cadastrar alguém")
 }
 
 export interface Fase02State {
@@ -51,6 +54,11 @@ export interface Fase02State {
   // NOVOS CAMPOS — Emenda de Reconciliação com Prontuário
   totalPacientesSistemaProntuario: number | null;  // resposta da nova pergunta na Tela 4, opcional
   reconciliacaoPendenteQuantidade: number;         // calculado — 0 se não houver diferença a reconciliar
+
+  // NOVO CAMPO — redesign da tela de Reconciliação (independente da emenda de prontuário
+  // acima): "ficou faltando cadastrar alguém que você lembrou agora?" — permite adicionar
+  // manualmente pessoas avulsas, sem depender de um número do sistema de prontuário.
+  reconcileAnswer?: '' | 'sim' | 'nao';
 }
 
 // ESTE BLOCO SERÁ CONSUMIDO POR EIXOS FUTUROS — nomes travados, não alterar

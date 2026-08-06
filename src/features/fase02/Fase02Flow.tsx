@@ -1,77 +1,50 @@
 // Fase02Flow.tsx
-// Orquestrador do fluxo da Fase 02 — Captação.
-// Máquina de estados que gerencia a navegação entre 4 telas + Tela Final.
-// Persistência: clients/{uid} campo "fase02" (mesmo padrão da Fase 01).
+// Orquestrador do fluxo da Fase 02 — Captação (redesign).
+// Máquina de estados: Lista (calendário + cadastro do dia, com checkbox de revisão de
+// 90 dias) → Reconciliação (pergunta opcional de prontuário + "ficou faltando alguém?")
+// → [loop de reconciliação com prontuário, se houver diferença] → Veredito.
+// Persistência: clients/{uid} campo "fase02" (mesmo padrão da Fase 01/versão anterior).
 
 import React, { useState, useCallback } from 'react';
 import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 
-import {
-  Fase02State,
-  ContatoCaptacao,
-  ResumoCaptacao,
-} from './fase02.types';
-
+import { Fase02State, ContatoCaptacao, ResumoCaptacao } from './fase02.types';
 import { calcularResumoCaptacao } from './lib/calcularResumoCaptacao';
+import { isoHoje, addDays } from './lib/calendario';
 
-import { ArrowLeft } from 'lucide-react';
-
-import Tela1Data from './telas/Tela1Data';
-import Tela2Formulario from './telas/Tela2Formulario';
-import Tela3Painel from './telas/Tela3Painel';
-import Tela4Trava from './telas/Tela4Trava';
-import TelaFinalVeredito from './telas/TelaFinalVeredito';
+import CalendarioLateral from './telas/CalendarioLateral';
+import TelaLista from './telas/TelaLista';
+import TelaFormulario from './telas/TelaFormulario';
+import TelaReconciliacao from './telas/TelaReconciliacao';
+import TelaVeredito from './telas/TelaVeredito';
 
 // ---------------------------------------------------------------------------
 // Tipos internos
 // ---------------------------------------------------------------------------
 
-type FlowStep =
-  | { screen: 'tela1' }
-  | { screen: 'tela2_criacao' }
-  | { screen: 'tela2_edicao'; contatoId: string }
-  | { screen: 'tela3' }
-  | { screen: 'tela4' }
-  | { screen: 'tela2_reconciliacao'; index: number }
-  | { screen: 'tela_final' };
+type Screen = 'list' | 'form' | 'reconcile' | 'reconcile_diff' | 'reconcile_loop' | 'veredito';
+type FormReturnScreen = 'list' | 'reconcile';
 
 // ---------------------------------------------------------------------------
-// Helpers de data
+// Helpers de estado inicial / persistência
 // ---------------------------------------------------------------------------
-
-function toISODate(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
-
-function buildJanelaInicial(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - 90);
-  return toISODate(d);
-}
-
-function buildJanelaFinal(): string {
-  return toISODate(new Date());
-}
 
 function buildInitialState(): Fase02State {
+  const hoje = isoHoje();
   return {
-    janelaInicial: buildJanelaInicial(),
-    janelaFinal: buildJanelaFinal(),
-    dataEmRevisao: null,
+    janelaInicial: addDays(hoje, -90),
+    janelaFinal: hoje,
+    dataEmRevisao: hoje,
     contatos: [],
     travaConfirmada: false,
     fase02Completa: false,
     atualizadoEm: new Date().toISOString(),
     totalPacientesSistemaProntuario: null,
     reconciliacaoPendenteQuantidade: 0,
+    reconcileAnswer: '',
   };
 }
-
-// ---------------------------------------------------------------------------
-// Persistência — caminho: clients/{uid} campo "fase02"
-// Segue a mesma convenção da Fase 01 (campo aninhado no doc do cliente).
-// ---------------------------------------------------------------------------
 
 async function persistirFase02(uid: string, state: Fase02State): Promise<void> {
   try {
@@ -114,68 +87,53 @@ async function persistirResumoCaptacaoFase02(uid: string, resumo: ResumoCaptacao
 interface Fase02FlowProps {
   uid: string;
   initialState?: Fase02State | null;
+  onAvancarCrm?: () => void;
 }
 
 // ---------------------------------------------------------------------------
 // Componente principal
 // ---------------------------------------------------------------------------
 
-export default function Fase02Flow({ uid, initialState }: Fase02FlowProps) {
+export default function Fase02Flow({ uid, initialState, onAvancarCrm }: Fase02FlowProps) {
   const [state, setStateRaw] = useState<Fase02State>(() => {
     const base = initialState ?? buildInitialState();
-    // Se a janela ainda não foi definida (primeira vez), inicializa agora
-    if (!base.janelaInicial || !base.janelaFinal) {
-      return buildInitialState();
-    }
-    // Modo de edição real (A.4): se já existem contatos, a Tela 3 reabre "destravada"
-    // localmente (editar/excluir liberados) até uma nova confirmação na Tela 4 —
-    // isso não é persistido até o usuário de fato agir de novo.
-    if (base.contatos.length > 0) {
-      const dataMaisRecente = base.contatos.reduce(
-        (max, c) => (c.data > max ? c.data : max),
-        base.contatos[0].data
-      );
-      return {
-        ...base,
-        travaConfirmada: false,
-        dataEmRevisao: base.dataEmRevisao ?? dataMaisRecente,
-      };
-    }
-    return base;
+    if (!base.janelaInicial || !base.janelaFinal) return buildInitialState();
+    return {
+      ...base,
+      dataEmRevisao: base.dataEmRevisao ?? isoHoje(),
+      totalPacientesSistemaProntuario: base.totalPacientesSistemaProntuario ?? null,
+      reconciliacaoPendenteQuantidade: base.reconciliacaoPendenteQuantidade ?? 0,
+      reconcileAnswer: base.reconcileAnswer ?? '',
+    };
   });
 
   // Se o eixo já foi concluído, abre direto no veredito (Tela Final). O usuário
-  // pode entrar em modo de edição a qualquer momento pelo botão "Revisar" da
-  // Tela Final, que reabre a Tela 3 (painel editável). Sem contatos, começa do
-  // zero na Tela 1. Usa fase02Completa (não travaConfirmada) porque uma edição
-  // posterior sem reconfirmar destrava localmente travaConfirmada, mas o eixo
-  // continua concluído para fins de navegação da Jornada.
-  const [step, setStep] = useState<FlowStep>(() => {
-    if (initialState?.fase02Completa) {
-      return { screen: 'tela_final' };
-    }
-    // Retomar loop de reconciliação de prontuário em andamento (caso de borda 4.3):
-    // se o nutricionista saiu no meio do cadastro das pessoas faltantes, retoma
-    // exatamente de onde parou, sem pedir para recadastrar quem já foi salvo.
-    if (
-      initialState &&
-      !initialState.travaConfirmada &&
-      initialState.reconciliacaoPendenteQuantidade > 0
-    ) {
+  // pode entrar em modo de edição a qualquer momento pelo botão "Revisar Captação",
+  // que reabre a Lista (painel editável). Retoma o loop de reconciliação com
+  // prontuário em andamento (caso de borda: nutricionista saiu no meio do cadastro
+  // das pessoas faltantes) exatamente de onde parou.
+  const [screen, setScreen] = useState<Screen>(() => {
+    if (initialState?.fase02Completa) return 'veredito';
+    if (initialState && !initialState.travaConfirmada && (initialState.reconciliacaoPendenteQuantidade ?? 0) > 0) {
       const jaReconciliados = (initialState.contatos ?? []).filter(
         (c) => c.origemRegistro === 'reconciliacao_prontuario'
       ).length;
-      if (jaReconciliados < initialState.reconciliacaoPendenteQuantidade) {
-        return { screen: 'tela2_reconciliacao', index: jaReconciliados };
+      if (jaReconciliados < (initialState.reconciliacaoPendenteQuantidade ?? 0)) {
+        return 'reconcile_loop';
       }
     }
-    const contatos = initialState?.contatos ?? [];
-    if (contatos.length > 0) return { screen: 'tela3' };
-    return { screen: 'tela1' };
+    return 'list';
+  });
+  const [loopIndex, setLoopIndex] = useState<number>(() => {
+    if (initialState && !initialState.travaConfirmada && (initialState.reconciliacaoPendenteQuantidade ?? 0) > 0) {
+      return (initialState.contatos ?? []).filter((c) => c.origemRegistro === 'reconciliacao_prontuario').length;
+    }
+    return 0;
   });
 
-  // Resumo calculado — preenchido após confirmação da Tela 4, ou recalculado
-  // na hora se o eixo já estava concluído (mesma lógica do step acima).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formReturnScreen, setFormReturnScreen] = useState<FormReturnScreen>('list');
+
   const [resumo, setResumo] = useState<ResumoCaptacao | null>(() => {
     if ((initialState?.travaConfirmada || initialState?.fase02Completa) && initialState?.contatos?.length) {
       return calcularResumoCaptacao(initialState.contatos);
@@ -183,23 +141,6 @@ export default function Fase02Flow({ uid, initialState }: Fase02FlowProps) {
     return null;
   });
 
-  // Histórico de telas visitadas nesta sessão — permite o botão "Voltar".
-  const [history, setHistory] = useState<FlowStep[]>([]);
-
-  function goToStep(next: FlowStep) {
-    setHistory((prev) => [...prev, step]);
-    setStep(next);
-  }
-
-  function handleVoltar() {
-    setHistory((prev) => {
-      if (prev.length === 0) return prev;
-      setStep(prev[prev.length - 1]);
-      return prev.slice(0, -1);
-    });
-  }
-
-  // Persiste e atualiza estado local — carimba atualizadoEm a cada gravação (A.4 / A.4.1)
   const setState = useCallback(
     (updater: (prev: Fase02State) => Fase02State) => {
       setStateRaw((prev) => {
@@ -211,254 +152,232 @@ export default function Fase02Flow({ uid, initialState }: Fase02FlowProps) {
     [uid]
   );
 
+  const selectedDate = state.dataEmRevisao ?? isoHoje();
+
   // -------------------------------------------------------------------------
-  // Handlers
+  // Handlers — Lista / Formulário
   // -------------------------------------------------------------------------
 
-  // TELA 1 — selecionou data, avança para Tela 2 (criação)
-  function handleTela1Avancar(data: string) {
-    setState((prev) => ({ ...prev, dataEmRevisao: data }));
-    goToStep({ screen: 'tela2_criacao' });
+  function selectDate(iso: string) {
+    setState((prev) => ({ ...prev, dataEmRevisao: iso }));
+    setScreen('list');
   }
 
-  // TELA 2 — salvou contato (criação)
-  function handleTela2Salvar(contato: ContatoCaptacao) {
+  function startAdd(returnScreen: FormReturnScreen) {
+    setEditingId(null);
+    setFormReturnScreen(returnScreen);
+    setScreen('form');
+  }
+
+  function startEdit(contato: ContatoCaptacao) {
+    setState((prev) => ({ ...prev, dataEmRevisao: contato.data }));
+    setEditingId(contato.id);
+    setFormReturnScreen('list');
+    setScreen('form');
+  }
+
+  function excluirContato(id: string) {
+    setState((prev) => ({ ...prev, contatos: prev.contatos.filter((c) => c.id !== id) }));
+  }
+
+  function salvarContato(contato: ContatoCaptacao) {
     setState((prev) => {
       const jaExiste = prev.contatos.some((c) => c.id === contato.id);
-      const novosContatos = jaExiste
-        ? prev.contatos.map((c) => (c.id === contato.id ? contato : c))
-        : [...prev.contatos, contato];
-      return { ...prev, contatos: novosContatos };
+      const contatoFinal = formReturnScreen === 'reconcile' && !jaExiste ? { ...contato, reconcileAdd: true } : contato;
+      const contatos = jaExiste
+        ? prev.contatos.map((c) => (c.id === contato.id ? contatoFinal : c))
+        : [...prev.contatos, contatoFinal];
+      return { ...prev, contatos };
     });
-    goToStep({ screen: 'tela3' });
+    setEditingId(null);
+    setScreen(formReturnScreen);
   }
 
-  // TELA 3 — adicionar outro na mesma data
-  function handleTela3AdicionarOutro() {
-    goToStep({ screen: 'tela2_criacao' });
+  function goConcluir() {
+    if (state.contatos.length === 0 || !state.travaConfirmada) return;
+    setScreen('reconcile');
   }
 
-  // TELA 3 — escolher outra data (volta para Tela 1)
-  function handleTela3EscolherOutraData() {
-    goToStep({ screen: 'tela1' });
-  }
+  // -------------------------------------------------------------------------
+  // Handlers — Reconciliação (prontuário + "ficou faltando alguém")
+  // -------------------------------------------------------------------------
 
-  // TELA 3 — concluir (vai para Tela 4, bloqueado se 0 contatos)
-  function handleTela3Concluir() {
-    if (state.contatos.length === 0) return;
-    goToStep({ screen: 'tela4' });
-  }
-
-  // TELA 3 — editar contato
-  function handleTela3Editar(contato: ContatoCaptacao) {
-    // Garante dataEmRevisao está alinhada com a data do contato que está sendo editado
-    setState((prev) => ({ ...prev, dataEmRevisao: contato.data }));
-    goToStep({ screen: 'tela2_edicao', contatoId: contato.id });
-  }
-
-  // TELA 3 — excluir contato (sem confirmação, per spec 4.3)
-  function handleTela3Excluir(id: string) {
-    setState((prev) => ({
-      ...prev,
-      contatos: prev.contatos.filter((c) => c.id !== id),
-    }));
-  }
-
-  // TELA 4 — avançar (após a pergunta de reconciliação com prontuário)
-  // Se não houver diferença a reconciliar, sela a fase normalmente. Se houver,
-  // inicia o loop de reconciliação (Tela 2 reaproveitada em modoReconciliacao).
-  function handleTela4Avancar(
-    totalPacientesSistemaProntuario: number | null,
-    reconciliacaoPendenteQuantidade: number
-  ) {
-    if (reconciliacaoPendenteQuantidade > 0) {
-      setState((prev) => ({
-        ...prev,
-        totalPacientesSistemaProntuario,
-        reconciliacaoPendenteQuantidade,
-      }));
-      goToStep({ screen: 'tela2_reconciliacao', index: 0 });
-      return;
-    }
-
-    const resumoCalculado = calcularResumoCaptacao(state.contatos);
-    setResumo(resumoCalculado);
-    setState((prev) => ({
-      ...prev,
-      totalPacientesSistemaProntuario,
-      reconciliacaoPendenteQuantidade: 0,
-      travaConfirmada: true,
-    }));
-    // Persiste ResumoCaptacao separadamente para que a Fase 03 possa ler
-    // totalNaoConvertidos sem recalcular — ver seção 7 da spec da Fase 03.
-    persistirResumoCaptacaoFase02(uid, resumoCalculado);
-    goToStep({ screen: 'tela_final' });
-  }
-
-  // TELA 4 — voltar para Tela 3 sem alterar dados (reaproveita o histórico genérico)
-  function handleTela4Voltar() {
-    handleVoltar();
-  }
-
-  // TELA 2 (reaproveitada, modoReconciliacao) — salvou um contato reconciliado
-  function handleTela2ReconciliacaoSalvar(contato: ContatoCaptacao, index: number) {
-    const proximoIndex = index + 1;
-    if (proximoIndex < state.reconciliacaoPendenteQuantidade) {
-      setState((prev) => ({ ...prev, contatos: [...prev.contatos, contato] }));
-      goToStep({ screen: 'tela2_reconciliacao', index: proximoIndex });
-      return;
-    }
-
-    // Última pessoa do loop — adiciona e sela a fase na mesma operação.
-    const contatosFinal = [...state.contatos, contato];
+  function finalizarVeredito(contatosFinal: ContatoCaptacao[]) {
     const resumoCalculado = calcularResumoCaptacao(contatosFinal);
     setResumo(resumoCalculado);
+    persistirResumoCaptacaoFase02(uid, resumoCalculado);
+    setScreen('veredito');
+  }
+
+  // Reconciliação · Continuar — recebe o valor opcional do sistema de prontuário
+  // (null = deixou em branco). Se houver diferença em relação aos convertidos já
+  // cadastrados, inicia o loop guiado de cadastro pessoa a pessoa antes do veredito.
+  function reconcileContinuar(prontuarioValor: number | null) {
+    const totalConvertidos = state.contatos.filter((c) => c.statusFechamento === 'sim').length;
+    if (prontuarioValor === null) {
+      setState((prev) => ({ ...prev, totalPacientesSistemaProntuario: null, reconciliacaoPendenteQuantidade: 0 }));
+      finalizarVeredito(state.contatos);
+      return;
+    }
+    const diferenca = Math.max(0, prontuarioValor - totalConvertidos);
     setState((prev) => ({
       ...prev,
-      contatos: contatosFinal,
-      travaConfirmada: true,
+      totalPacientesSistemaProntuario: prontuarioValor,
+      reconciliacaoPendenteQuantidade: diferenca,
     }));
-    persistirResumoCaptacaoFase02(uid, resumoCalculado);
-    goToStep({ screen: 'tela_final' });
+    if (diferenca === 0) {
+      finalizarVeredito(state.contatos);
+      return;
+    }
+    setScreen('reconcile_diff');
   }
 
-  // TELA FINAL — marcar fase02Completa
+  function iniciarLoopReconciliacao() {
+    setLoopIndex(0);
+    setScreen('reconcile_loop');
+  }
+
+  // Loop de reconciliação com prontuário — salvou uma pessoa (index atual do loop)
+  function salvarPessoaLoopReconciliacao(contato: ContatoCaptacao) {
+    const contatosFinal = [...state.contatos, contato];
+    const proximoIndex = loopIndex + 1;
+    setState((prev) => ({ ...prev, contatos: contatosFinal }));
+    if (proximoIndex < state.reconciliacaoPendenteQuantidade) {
+      setLoopIndex(proximoIndex);
+      return;
+    }
+    finalizarVeredito(contatosFinal);
+  }
+
   function handleFinalComplete() {
-    setState((prev) => ({ ...prev, fase02Completa: true }));
+    if (!state.fase02Completa) {
+      setState((prev) => ({ ...prev, fase02Completa: true, travaConfirmada: true }));
+    }
   }
 
-  // TELA FINAL — botão "Revisar": entra em modo de edição a partir da Tela 3
+  // Veredito · "Revisar Captação" — volta para a Lista em modo de edição
   function handleRevisar() {
-    setHistory([]);
-    setStep({ screen: 'tela3' });
+    setScreen('list');
   }
 
   // -------------------------------------------------------------------------
-  // Render — máquina de estados
+  // Render
   // -------------------------------------------------------------------------
 
-  // Contato em edição (para Tela 2 em modo edição)
-  const contatoEditando =
-    step.screen === 'tela2_edicao'
-      ? state.contatos.find((c) => c.id === (step as { screen: 'tela2_edicao'; contatoId: string }).contatoId)
-      : undefined;
+  const contatoEditando = editingId ? state.contatos.find((c) => c.id === editingId) : undefined;
+  const contactsForDate = state.contatos
+    .filter((c) => c.data === selectedDate)
+    .sort((a, b) => (a.criadoEm < b.criadoEm ? 1 : -1));
+  const datasComCadastro = new Set<string>(state.contatos.map((c) => c.data));
+  const rangeEnd = isoHoje();
+  const rangeStart = addDays(rangeEnd, -89);
+  const reconcileContacts = state.contatos.filter((c) => c.reconcileAdd).sort((a, b) => (a.criadoEm < b.criadoEm ? 1 : -1));
+  const totalConvertidosAtual = state.contatos.filter((c) => c.statusFechamento === 'sim').length;
+
+  const showCalendar = screen === 'list' || screen === 'form' || screen === 'reconcile';
 
   return (
-    <div className="w-full py-8 px-4">
-      {history.length > 0 && (
-        <div className="w-full max-w-4xl mx-auto mb-3">
-          <button
-            type="button"
-            id="btn_fase02_voltar"
-            onClick={handleVoltar}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Voltar
-          </button>
-        </div>
-      )}
-
-      {step.screen === 'tela1' && (
-        <Tela1Data
-          janelaInicial={state.janelaInicial}
-          janelaFinal={state.janelaFinal}
-          onAvancar={handleTela1Avancar}
-        />
-      )}
-
-      {(step.screen === 'tela2_criacao' || step.screen === 'tela2_edicao') &&
-        state.dataEmRevisao && (
-          <React.Fragment
-            key={step.screen === 'tela2_edicao'
-              ? `edit-${(step as { screen: 'tela2_edicao'; contatoId: string }).contatoId}`
-              : `create-${state.dataEmRevisao}`}
-          >
-            <Tela2Formulario
-              dataEmRevisao={state.dataEmRevisao}
-              contatoEditando={contatoEditando}
-              onSalvar={handleTela2Salvar}
-            />
-          </React.Fragment>
+    <div className="w-full" style={{ minHeight: '100%' }}>
+      <div className="flex items-start gap-6 flex-col md:flex-row">
+        {showCalendar && (
+          <CalendarioLateral datasComCadastro={datasComCadastro} selectedDate={selectedDate} onSelectDate={selectDate} />
         )}
 
-      {step.screen === 'tela3' && state.dataEmRevisao && (
-        <Tela3Painel
-          dataEmRevisao={state.dataEmRevisao}
-          contatos={state.contatos}
-          travaConfirmada={state.travaConfirmada}
-          onAdicionarOutro={handleTela3AdicionarOutro}
-          onEscolherOutraData={handleTela3EscolherOutraData}
-          onConcluir={handleTela3Concluir}
-          onEditar={handleTela3Editar}
-          onExcluir={handleTela3Excluir}
-        />
-      )}
+        <div className="flex-1 min-w-0" style={{ maxWidth: 820 }}>
+          {screen === 'list' && (
+            <TelaLista
+              selectedDate={selectedDate}
+              contactsForDate={contactsForDate}
+              totalGeral={state.contatos.length}
+              rangeStart={rangeStart}
+              rangeEnd={rangeEnd}
+              confirmChecked={state.travaConfirmada}
+              onToggleConfirm={() => setState((prev) => ({ ...prev, travaConfirmada: !prev.travaConfirmada }))}
+              onStartAdd={() => startAdd('list')}
+              onEditar={startEdit}
+              onExcluir={excluirContato}
+              onConcluir={goConcluir}
+            />
+          )}
 
-      {step.screen === 'tela4' && (
-        <Tela4Trava
-          janelaInicial={state.janelaInicial}
-          janelaFinal={state.janelaFinal}
-          totalContatos={state.contatos.length}
-          totalConvertidos={state.contatos.filter((c) => c.statusFechamento === 'sim').length}
-          onAvancar={handleTela4Avancar}
-          onVoltar={handleTela4Voltar}
-        />
-      )}
+          {screen === 'form' && (
+            <TelaFormulario
+              selectedDate={selectedDate}
+              contatoEditando={contatoEditando}
+              onSalvar={salvarContato}
+              onVoltar={() => setScreen(formReturnScreen)}
+            />
+          )}
 
-      {step.screen === 'tela2_reconciliacao' && (
-        <React.Fragment key={`reconciliacao-${step.index}`}>
-          <div className="w-full max-w-2xl mx-auto mb-3">
-            <p className="text-xs font-semibold text-sky-400 uppercase tracking-widest">
-              Reconciliação de prontuário: pessoa {step.index + 1} de{' '}
-              {state.reconciliacaoPendenteQuantidade}
-            </p>
-          </div>
-          <Tela2Formulario
-            dataEmRevisao={state.janelaFinal}
-            modoReconciliacao
-            onSalvar={(contato) => handleTela2ReconciliacaoSalvar(contato, step.index)}
-          />
-        </React.Fragment>
-      )}
+          {screen === 'reconcile' && (
+            <TelaReconciliacao
+              prontuarioCount={state.totalPacientesSistemaProntuario === null ? '' : String(state.totalPacientesSistemaProntuario)}
+              onSetProntuarioCount={(v) =>
+                setState((prev) => ({ ...prev, totalPacientesSistemaProntuario: v === '' ? null : Number(v) }))
+              }
+              reconcileAnswer={state.reconcileAnswer ?? ''}
+              onSetReconcileAnswer={(v) => setState((prev) => ({ ...prev, reconcileAnswer: v }))}
+              reconcileContacts={reconcileContacts}
+              onExcluir={excluirContato}
+              onStartAddForgotten={() => startAdd('reconcile')}
+              onContinuar={() =>
+                reconcileContinuar(
+                  state.totalPacientesSistemaProntuario === null ? null : state.totalPacientesSistemaProntuario
+                )
+              }
+              onVoltar={() => setScreen('list')}
+            />
+          )}
 
-      {step.screen === 'tela_final' && resumo && (
-        <TelaFinalVeredito
-          resumo={resumo}
-          onComplete={handleFinalComplete}
-          onRevisar={handleRevisar}
-        />
-      )}
+          {screen === 'reconcile_diff' && (
+            <div>
+              <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1.4, marginBottom: 22 }}>
+                Você achou <span style={{ color: '#4ade80' }}>{totalConvertidosAtual}</span> pacientes revisando o
+                WhatsApp, mas seu sistema mostra{' '}
+                <span style={{ color: '#38bdf8' }}>{state.totalPacientesSistemaProntuario}</span> pacientes novos no
+                período. Isso quer dizer que{' '}
+                <span style={{ color: '#a596ff', fontWeight: 700 }}>
+                  {state.reconciliacaoPendenteQuantidade}{' '}
+                  {state.reconciliacaoPendenteQuantidade === 1 ? 'pessoa veio' : 'pessoas vieram'}
+                </span>{' '}
+                por um caminho que essa revisão não capturou. Vamos cadastrar rapidamente essas pessoas também, uma
+                por uma.
+              </div>
+              <div
+                onClick={iniciarLoopReconciliacao}
+                style={{ background: 'linear-gradient(135deg,#6d5ef8,#4f3fd6)', borderRadius: 12, padding: '16px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', color: '#fff' }}
+              >
+                Cadastrar as {state.reconciliacaoPendenteQuantidade}{' '}
+                {state.reconciliacaoPendenteQuantidade === 1 ? 'pessoa' : 'pessoas'} que faltam
+              </div>
+            </div>
+          )}
 
-      {/* Fallback: tela_final sem resumo para exibir. Acontece quando fase02Completa
-          ainda é true mas os contatos foram todos excluídos depois da conclusão
-          (Tela 3 permite excluir um a um) — não há dados para gerar o veredito.
-          Em vez de travar num "carregando" infinito, avisa o usuário e permite
-          preencher o eixo novamente. */}
-      {step.screen === 'tela_final' && !resumo && (
-        <div className="w-full max-w-2xl mx-auto space-y-6" id="tela_final_veredito_vazio">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
-            <span className="text-[10px] font-bold tracking-widest text-amber-400 uppercase">
-              Eixo 02 · Captação · Sem dados para exibir
-            </span>
-          </div>
-          <h1 className="text-xl font-bold text-white leading-snug">
-            Não encontramos nenhum contato cadastrado para gerar o veredito desta fase.
-          </h1>
-          <p className="text-sm text-slate-400 leading-relaxed">
-            Isso normalmente acontece quando todos os contatos cadastrados foram excluídos
-            depois da conclusão do eixo. Preencha o eixo novamente para gerar um novo veredito.
-          </p>
-          <button
-            type="button"
-            id="btn_tela_final_vazio_preencher"
-            onClick={handleRevisar}
-            className="btn-primary flex items-center gap-2 px-6 py-3 text-sm font-bold rounded-xl"
-          >
-            Preencher este eixo
-          </button>
+          {screen === 'reconcile_loop' && (
+            <React.Fragment key={`reconciliacao-${loopIndex}`}>
+              <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.04em', color: '#38bdf8', textTransform: 'uppercase', marginBottom: 12 }}>
+                Reconciliação de prontuário: pessoa {loopIndex + 1} de {state.reconciliacaoPendenteQuantidade}
+              </div>
+              <TelaFormulario
+                selectedDate={state.janelaFinal}
+                onSalvar={salvarPessoaLoopReconciliacao}
+                onVoltar={() => setScreen('reconcile')}
+                modoReconciliacao
+              />
+            </React.Fragment>
+          )}
+
+          {screen === 'veredito' && (
+            <TelaVeredito
+              resumo={resumo}
+              onComplete={handleFinalComplete}
+              onPreencherEixo={() => setScreen('list')}
+              onAvancarCrm={() => (onAvancarCrm ? onAvancarCrm() : undefined)}
+              onRevisar={handleRevisar}
+            />
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

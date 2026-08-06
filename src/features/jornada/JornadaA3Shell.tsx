@@ -23,6 +23,36 @@ import Fase03Flow from '../fase03/Fase03Flow';
 import Fase04Flow from '../fase04/Fase04Flow';
 import Fase09Flow from '../fase09/Fase09Flow';
 import FaseNaoImplementada from './FaseNaoImplementada';
+import CrmBridgeFlow from '../crmBridge/CrmBridgeFlow';
+import type { ContatoCaptacao } from '../fase02/fase02.types';
+
+// ---------------------------------------------------------------------------
+// Persistência — Ponte CRM (não faz parte da máquina de 9 fases, ver crmBridge.types.ts)
+// ---------------------------------------------------------------------------
+
+async function salvarContatoFaltanteNoFase02(uid: string, contato: ContatoCaptacao): Promise<void> {
+  try {
+    const clientDocRef = doc(db, 'clients', uid);
+    const snap = await getDoc(clientDocRef);
+    const fase02Atual = snap.exists() ? snap.data()?.fase02 : null;
+    const contatosAtuais: ContatoCaptacao[] = fase02Atual?.contatos ?? [];
+    const novosContatos = [...contatosAtuais, contato];
+    if (snap.exists() && fase02Atual) {
+      await updateDoc(clientDocRef, {
+        'fase02.contatos': novosContatos,
+        'fase02.atualizadoEm': new Date().toISOString(),
+      });
+    } else {
+      await setDoc(
+        clientDocRef,
+        { fase02: { contatos: novosContatos, atualizadoEm: new Date().toISOString() } },
+        { merge: true }
+      );
+    }
+  } catch (err) {
+    console.error('[JornadaA3Shell] Erro ao salvar contato faltante (Ponte CRM):', err);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Definição estática das 9 fases
@@ -111,6 +141,8 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
   const [jornadaState, setJornadaStateRaw] = useState<JornadaState | null>(null);
   const [faseFocada, setFaseFocada] = useState<FaseJornadaId | null>(null);
   const [loading, setLoading] = useState(true);
+  // Ponte CRM — não é uma das 9 fases; alterna o conteúdo sem tocar em jornadaState/faseFocada.
+  const [mostrarCrmBridge, setMostrarCrmBridge] = useState(false);
 
   // Ref para a lista horizontal — usada para scroll até etapa ativa
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -200,10 +232,20 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
     (etapa: EtapaJornada) => {
       if (etapa.status === 'bloqueada') return;
       if (etapa.status === 'nao_implementada') return;
+      setMostrarCrmBridge(false);
       setFaseFocada(etapa.id);
     },
     []
   );
+
+  // Clique no nó "CRM" da trilha — só faz sentido depois que a Captação foi alcançada
+  // (mesmo critério de "clicável" das etapas normais: em_andamento ou concluída).
+  const etapaCaptacao = etapas.find((e) => e.id === 'fase02_captacao');
+  const podeAbrirCrmBridge = etapaCaptacao?.status === 'em_andamento' || etapaCaptacao?.status === 'concluida';
+  const handleClickCrmBridge = useCallback(() => {
+    if (!podeAbrirCrmBridge) return;
+    setMostrarCrmBridge(true);
+  }, [podeAbrirCrmBridge]);
 
   if (loading || !jornadaState) {
     return (
@@ -254,7 +296,8 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
             const clicavel = etapa.status === 'em_andamento' || etapa.status === 'concluida';
 
             return (
-              <div key={etapa.id} className="flex items-center shrink-0">
+              <React.Fragment key={etapa.id}>
+              <div className="flex items-center shrink-0">
                 {/* Nó da etapa */}
                 <button
                   ref={isAtiva ? (el) => { (etapaAtivaRef as any).current = el; } : undefined}
@@ -336,6 +379,34 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
                   />
                 )}
               </div>
+
+              {/* Nó extra "CRM" — Ponte Captação → Vendas, inserido entre os nós 02 e 03.
+                  Não é uma das 9 fases: fica fora de `etapas`, montado manualmente aqui. */}
+              {etapa.id === 'fase02_captacao' && podeAbrirCrmBridge && (
+                <div className="flex items-center shrink-0">
+                  <button
+                    type="button"
+                    id="etapa_crm_bridge"
+                    onClick={handleClickCrmBridge}
+                    title="CRM — Ponte Captação → Vendas"
+                    aria-current={mostrarCrmBridge ? 'step' : undefined}
+                    aria-label="Ponte CRM entre Captação e Vendas"
+                    className={[
+                      'flex flex-col items-center gap-1 px-1.5 py-1.5 rounded-lg transition-all min-w-[40px] cursor-pointer',
+                      mostrarCrmBridge
+                        ? 'bg-indigo-600/25 border-2 border-indigo-500'
+                        : 'bg-indigo-500/10 border border-indigo-500/40 hover:bg-indigo-500/15',
+                    ].join(' ')}
+                  >
+                    <div className="h-4 w-4 rounded-[5px] flex items-center justify-center bg-indigo-500/20 text-indigo-300">
+                      <span className="text-[7px] font-black">⇄</span>
+                    </div>
+                    <span className="text-[8px] font-bold text-indigo-300">CRM</span>
+                  </button>
+                  <div className="h-px w-3 shrink-0 mx-0.5 bg-white/10" aria-hidden="true" />
+                </div>
+              )}
+            </React.Fragment>
             );
           })}
         </div>
@@ -345,12 +416,28 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
       {/* CONTEÚDO DA FASE EM FOCO                                            */}
       {/* ------------------------------------------------------------------ */}
       <div id="jornada_conteudo_fase">
-        {faseFocada === 'fase01_promessa_metodo' ? (
+        {mostrarCrmBridge ? (
+          // Ponte CRM — não é uma das 9 fases, vive fora da máquina fasesConcluidas/faseAtualId
+          <CrmBridgeFlow
+            uid={uid}
+            initialState={clientRecord?.crmBridge ?? null}
+            contatosFase02={clientRecord?.fase02?.contatos ?? []}
+            onSalvarContatoFaltante={(contato) => salvarContatoFaltanteNoFase02(uid, contato)}
+            onVoltarCaptacao={() => {
+              setMostrarCrmBridge(false);
+              setFaseFocada('fase02_captacao');
+            }}
+          />
+        ) : faseFocada === 'fase01_promessa_metodo' ? (
           // Fase 01 — modo edição: passa initialState com dados já salvos (A.4)
           <Fase01Flow uid={uid} initialState={clientRecord?.fase01 ?? null} />
         ) : faseFocada === 'fase02_captacao' ? (
           // Fase 02 — modo edição: idem
-          <Fase02Flow uid={uid} initialState={clientRecord?.fase02 ?? null} />
+          <Fase02Flow
+            uid={uid}
+            initialState={clientRecord?.fase02 ?? null}
+            onAvancarCrm={() => setMostrarCrmBridge(true)}
+          />
         ) : faseFocada === 'fase03_vendas' ? (
           // Fase 03 — Vendas
           <Fase03Flow

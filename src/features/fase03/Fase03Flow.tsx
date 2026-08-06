@@ -107,7 +107,7 @@ export default function Fase03Flow({ uid, initialState, clientRecord }: Fase03Fl
   // ─── Verificação de integração cruzada (spec seção 7 e regra 0.7) ────────
   // Lê totalNaoConvertidos diretamente do ResumoCaptacao persistido da Fase 02.
   // Caminho: clients/{uid}.fase02.ResumoCaptacao.totalNaoConvertidos
-  // (A Fase 02 persiste ResumoCaptacao como campo do documento da fase02 — ver TelaFinalVeredito.tsx)
+  // (A Fase 02 persiste ResumoCaptacao como campo do documento da fase02 — ver Fase02Flow.tsx)
   const fase02Completa: boolean = !!(clientRecord?.fase02?.fase02Completa);
   const totalNaoConvertidosFase02: number =
     clientRecord?.fase02?.ResumoCaptacao?.totalNaoConvertidos ?? null;
