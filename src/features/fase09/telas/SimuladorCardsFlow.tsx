@@ -42,6 +42,7 @@ import {
   listarSimulacoesGuardadas,
   alternarFavoritaSimulacao,
 } from '../lib/eixo09Service';
+import { obterDatasA3 } from '../../../lib/dateUtils';
 
 interface SimuladorCardsFlowProps {
   uid: string;
@@ -57,6 +58,7 @@ export default function SimuladorCardsFlow({
   onSalvarPremissas,
 }: SimuladorCardsFlowProps) {
   const [state, setState] = useState<SimuladorState>(initialState);
+  const datas = useMemo(() => obterDatasA3(null), []);
   const [simulacoesGuardadas, setSimulacoesGuardadas] = useState<ResumoSimulacaoEixo09[]>([]);
   const [modalGuardarAberto, setModalGuardarAberto] = useState(false);
   const [nomeCustomSimulacao, setNomeCustomSimulacao] = useState('');
@@ -162,8 +164,119 @@ export default function SimuladorCardsFlow({
     }
   };
 
+  // 1-Click Presets de Cenários Rápidos
+  const handleAplicarCenarioConservador = () => {
+    setState((prev) => ({
+      ...prev,
+      card1Ativo: true,
+      novosPacientesQuantidade: 4,
+      card2Ativo: false,
+      card3Ativo: false,
+      card5ApoioComercialAtivo: true,
+      card5MelhoraConversaoPercentual: 15,
+      card6Ativo: true,
+      quantidadeResgatar: Math.max(5, Math.floor((contexto.totalPacientesInativos || 10) * 0.3)),
+      taxaSucessoPercentual: 20,
+    }));
+    setFeedbackMensagem('🟢 Cenário Conservador Aplicado: Foco em melhorar a conversão do WhatsApp e resgatar pacientes inativos com R$ 0 em anúncios!');
+    setTimeout(() => setFeedbackMensagem(null), 5000);
+  };
+
+  const handleAplicarCenarioModerado = () => {
+    setState((prev) => ({
+      ...prev,
+      card1Ativo: true,
+      novosPacientesQuantidade: 6,
+      card2Ativo: true,
+      reajusteValorReais: 50,
+      taxaSaidaEsperadaPercentual: 5,
+      card3Ativo: true,
+      quantidadeMigrar: Math.max(2, Math.floor(contexto.baseAtivosAtual * 0.2)),
+      card5ApoioComercialAtivo: false,
+      card6Ativo: true,
+      quantidadeResgatar: Math.max(3, Math.floor((contexto.totalPacientesInativos || 10) * 0.2)),
+      taxaSucessoPercentual: 15,
+    }));
+    setFeedbackMensagem('🔵 Cenário Moderado Aplicado: Ajuste moderado no preço do acompanhamento e migração de 20% da base para planos longos!');
+    setTimeout(() => setFeedbackMensagem(null), 5000);
+  };
+
+  const handleAplicarCenarioArrojado = () => {
+    setState((prev) => ({
+      ...prev,
+      card1Ativo: true,
+      novosPacientesQuantidade: 10,
+      card2Ativo: true,
+      reajusteValorReais: 100,
+      taxaSaidaEsperadaPercentual: 10,
+      card3Ativo: true,
+      quantidadeMigrar: Math.max(5, Math.floor(contexto.baseAtivosAtual * 0.35)),
+      card5ApoioOperacionalAtivo: true,
+      card5CustoOperacionalReais: 1800,
+      card5HorasAbsorvidasOperacional: 30,
+      card6Ativo: true,
+      quantidadeResgatar: Math.max(8, Math.floor((contexto.totalPacientesInativos || 10) * 0.4)),
+      taxaSucessoPercentual: 25,
+    }));
+    setFeedbackMensagem('🚀 Cenário Arrojado Aplicado: Aceleração com apoio de equipe assistente, foco em produto High-Ticket e escala comercial!');
+    setTimeout(() => setFeedbackMensagem(null), 5000);
+  };
+
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8" id="mesa_controle_viva">
+      {/* ---------------------------------------------------------------- */}
+      {/* ATALHOS DE CENÁRIOS PRONTOS COM 1 CLIQUE                         */}
+      {/* ---------------------------------------------------------------- */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 font-label flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5" /> Cenários Prontos com 1 Clique
+          </span>
+          <span className="text-[10px] text-slate-500">Escolha um atalho para preencher os controles automaticamente</span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <button
+            type="button"
+            onClick={handleAplicarCenarioConservador}
+            className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-left hover:bg-emerald-500/20 transition-all cursor-pointer space-y-1"
+          >
+            <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+              🟢 Conservador
+            </div>
+            <p className="text-[11px] text-slate-300 leading-snug">
+              Melhora conversão do WhatsApp e resgata pacientes sumidos com R$ 0 em anúncios.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleAplicarCenarioModerado}
+            className="p-3.5 rounded-xl border border-blue-500/30 bg-blue-500/10 text-left hover:bg-blue-500/20 transition-all cursor-pointer space-y-1"
+          >
+            <div className="text-xs font-bold text-blue-400 flex items-center gap-1.5">
+              🔵 Moderado
+            </div>
+            <p className="text-[11px] text-slate-300 leading-snug">
+              Reajuste suave de R$ 50 no valor da consulta e migração de 20% da base para planos longos.
+            </p>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleAplicarCenarioArrojado}
+            className="p-3.5 rounded-xl border border-purple-500/30 bg-purple-500/10 text-left hover:bg-purple-500/20 transition-all cursor-pointer space-y-1"
+          >
+            <div className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+              🚀 Arrojado
+            </div>
+            <p className="text-[11px] text-slate-300 leading-snug">
+              Contrata assistente para liberar 15h de agenda e acelera a venda do produto High-Ticket.
+            </p>
+          </button>
+        </div>
+      </div>
+
       {/* ---------------------------------------------------------------- */}
       {/* DASHBOARD DE RESULTADO AO VIVO (PAINEL SUPERIOR)                  */}
       {/* ---------------------------------------------------------------- */}
@@ -388,6 +501,32 @@ export default function SimuladorCardsFlow({
                 </button>
               </div>
             </div>
+
+            {/* Histórico real de leads do Eixo 02 — só aparece se existirem dados */}
+            {contexto.leadsMensaisMedia > 0 && (
+              <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/50 flex items-start gap-3 text-xs">
+                <TrendingUp className="h-4 w-4 text-emerald-400 mt-0.5 flex-none" />
+                <div>
+                  <span className="text-slate-200 font-semibold block">
+                    Seu histórico real (Eixo 02): cerca de{' '}
+                    <strong className="text-emerald-400">{Math.round(contexto.leadsMensaisMedia)} pessoas</strong>{' '}
+                    entraram em contato com você por mês nos últimos 3 meses.
+                  </span>
+                  {resultado.leadsNecessariosMes > 0 && (
+                    <span className={`mt-1 block font-semibold ${
+                      resultado.leadsNecessariosMes <= contexto.leadsMensaisMedia
+                        ? 'text-emerald-400'
+                        : 'text-amber-400'
+                    }`}>
+                      {resultado.leadsNecessariosMes <= contexto.leadsMensaisMedia
+                        ? `✓ Sua meta de ${state.novosPacientesQuantidade} novos pacientes cabe no fluxo atual de contatos.`
+                        : `⚠ Sua meta exige ${resultado.leadsNecessariosMes} contatos/mês — ${resultado.leadsNecessariosMes - Math.round(contexto.leadsMensaisMedia)} a mais do que o seu histórico. Considere aumentar a captação.`
+                      }
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Presets de Distribuição */}
             <div className="space-y-2">
@@ -1195,8 +1334,26 @@ export default function SimuladorCardsFlow({
 
                 <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-300">
                   🎯 <strong>Impacto Comercial:</strong> Com a conversão subindo para{' '}
-                  {(contexto.taxaConversaoGeral + state.card5MelhoraConversaoPercentual).toFixed(1)}%, você precisa de menos leads mensais para bater a meta de novos pacientes no Card 1.
+                  {(contexto.taxaConversaoGeral + state.card5MelhoraConversaoPercentual).toFixed(1)}%, você precisa de menos contatos mensais para bater a meta de novos pacientes no Card 1.
                 </div>
+
+                {/* Canais campeões do Eixo 02 — só exibe se existirem */}
+                {contexto.canaisCampeoes.length > 0 && (
+                  <div className="p-3 rounded-xl bg-emerald-500/8 border border-emerald-500/20 text-xs space-y-1">
+                    <span className="text-emerald-400 font-bold block">🏆 Seus Canais Campeões (Eixo 02 · Captação):</span>
+                    <p className="text-slate-400">
+                      Esses são os canais que mais converteram contatos em pacientes reais no seu histórico.
+                      Priorize-os antes de investir em canais novos.
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {contexto.canaisCampeoes.map((canal, i) => (
+                        <span key={canal} className="px-2 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold text-[10px]">
+                          {i + 1}° {canal.replace(/_/g, ' ')}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1362,6 +1519,59 @@ export default function SimuladorCardsFlow({
             </div>
           </div>
         ) : null}
+      </div>
+
+      {/* ---------------------------------------------------------------- */}
+      {/* VEREDITO DO SIMULADOR — PLANO DE AÇÃO TÁTICO DE 90 DIAS          */}
+      {/* ---------------------------------------------------------------- */}
+      <div className="bg-gradient-to-br from-slate-900 to-indigo-950/60 border border-indigo-500/40 rounded-2xl p-6 space-y-4 shadow-2xl">
+        <div className="flex items-center justify-between border-b border-white/10 pb-4">
+          <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm">
+            <CheckCircle2 className="h-5 w-5" />
+            <span>📋 Veredito Executivo: Ritmo Operacional Semanal ({datas.intervaloProximos90Dias})</span>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
+            {resultado.bateuNumeroMagico ? 'Meta Viável ✓' : 'Necessita Ajuste em Alavanca'}
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-300 leading-relaxed">
+          Para alcançar os <strong>R$ {resultado.lucroLiquidoSimulado.toLocaleString('pt-BR')}/mês</strong> de lucro líquido sem exceder o seu teto de <strong>{state.tetoSemanaPerfeita}h/semana</strong>, mantenha este ritmo tático no dia a dia:
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-1">
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">1. Meta Semanal de Vendas</span>
+            <p className="text-base font-extrabold text-white">
+              {Math.ceil(resultado.totalPacientesSimulados / 4)} novos contratos
+            </p>
+            <p className="text-[11px] text-slate-400">por semana</p>
+          </div>
+
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">2. Meta no WhatsApp</span>
+            <p className="text-base font-extrabold text-indigo-300">
+              {Math.ceil(resultado.leadsNecessariosMes / 4)} interessados
+            </p>
+            <p className="text-[11px] text-slate-400">por semana (~{Math.ceil(resultado.leadsNecessariosMes / 20)}/dia útil)</p>
+          </div>
+
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">3. Investimento Semanal</span>
+            <p className="text-base font-extrabold text-teal-300">
+              R$ {Math.round((contexto.custosFixosTotais > 0 ? contexto.custosFixosTotais : 1200) / 4)}
+            </p>
+            <p className="text-[11px] text-slate-400">por semana em mídia/anúncios</p>
+          </div>
+
+          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">4. Teto de Atendimento</span>
+            <p className="text-base font-extrabold text-emerald-400">
+              {resultado.cargaHorariaSemanalExigida} horas
+            </p>
+            <p className="text-[11px] text-slate-400">máximo de consultas/semana</p>
+          </div>
+        </div>
       </div>
 
       {/* ---------------------------------------------------------------- */}

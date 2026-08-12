@@ -113,6 +113,8 @@ export interface ServiceData {
   duracaoContrato: 'Pontual (1 dia)' | '30 dias' | '90 dias (Trimestral)' | '180 dias (Semestral)' | '360 dias (Anual)' | '';
   activePatients: number;
   vendasUltimos90Dias: number;
+  durationDays?: number;
+  deliveryDuringRatio?: number;
   // Legacy compatibility
   type?: 'consulta' | 'pacote' | 'plano';
   format?: 'Presencial' | 'Online' | 'Híbrido';
@@ -497,7 +499,11 @@ export type QuestionType =
   | 'Repetidor Serviços'
   | 'Repetidor Compromissos'
   | 'Contador Numérico Multi'
-  | 'Escolha única por Público';
+  | 'Escolha única por Público'
+  | 'choice'
+  | 'text'
+  | 'number'
+  | 'boolean';
 
 export interface QuestionSchema {
   id: string | number;

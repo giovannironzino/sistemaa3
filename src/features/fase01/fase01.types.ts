@@ -11,22 +11,34 @@ export type ClusterId =
 export interface VolumePorCluster {
   clusterId: ClusterId;
   quantidadePessoas: number; // inteiro, >= 0
+  ticketMedioEstimado?: number; // valor em R$ estimado para este cluster
 }
 
 export interface PromessaPorCluster {
   clusterId: ClusterId;
-  promessaSelecionada: string; // texto exato de uma das 4 opções da seção 4
+  promessaSelecionada: string;
+}
+
+export interface PacienteMapeadoEixo01 {
+  id: string;
+  nome: string;
+  dorId: ClusterId;
+  pilarForte: string; // Fator Prioritário 🥇 (Lógica interna: 80%)
+  elementoDiferencial: string; // Fator Decisivo 🥈 (Lógica interna: 20%)
+  ticketPagoEstimado?: number; // Valor pago ou ticket estimado
+  createdAt?: string;
 }
 
 export interface Fase01State {
-  volumes: VolumePorCluster[];           // sempre 6 itens (um por cluster), preenchidos na Tela 1
-  clustersQualificados: ClusterId[];     // subconjunto com quantidadePessoas >= 1, ordenado do maior para o menor volume
-  promessas: PromessaPorCluster[];       // uma entrada por cluster que passou pela Tela 2 (inclusive quando reaproveitada pela Tela 4)
-  publicoAlvoFinal: ClusterId | null;    // definido na Tela 3 ("Sim") ou na Tela 4
-  metodoSelecionado: MetodoId | null;    // definido na Tela 5
-  fluxoSemDados: boolean;                // true se os 6 volumes vierem como 0 (ver seção 6.1)
-  fase01Completa: boolean;               // true somente após a Tela Final ser exibida com sucesso
-  atualizadoEm: string;                  // timestamp ISO da última gravação desta fase (A.4 / A.4.1)
+  volumes: VolumePorCluster[];           // 6 itens (um por cluster)
+  clustersQualificados: ClusterId[];     // subconjunto com quantidadePessoas >= 1
+  promessas: PromessaPorCluster[];       
+  publicoAlvoFinal: ClusterId | null;    
+  metodoSelecionado: MetodoId | null;    
+  pacientesMapeados: PacienteMapeadoEixo01[]; // Lista de pacientes mapeados ao vivo
+  fluxoSemDados: boolean;                
+  fase01Completa: boolean;               
+  atualizadoEm: string;                  
 }
 
 export type MetodoId =
@@ -35,3 +47,60 @@ export type MetodoId =
   | 'foco_comportamento'
   | 'prescricao_tecnica'
   | 'escuta_sem_julgamento';
+
+export const FATORES_PRIORITARIOS_POR_DOR: Record<ClusterId, { rotulo: string; opcoes: string[] }> = {
+  estetica_emagrecimento: {
+    rotulo: 'Emagrecimento / Mudança de Corpo',
+    opcoes: [
+      'Liberdade & Praticidade',
+      'Transformação Visual',
+      'Consistência Sem Efeito Sanfona',
+      'Saúde & Mobilidade'
+    ]
+  },
+  saude_clinica: {
+    rotulo: 'Exames Alterados / Tratamento de Doenças',
+    opcoes: [
+      'Normalização de Exames',
+      'Redução de Sintomas Físicos',
+      'Apoio para Reduzir Remédios',
+      'Segurança para Comer'
+    ]
+  },
+  comportamento_alimentar: {
+    rotulo: 'Ansiedade / Compulsão / Relação com Comida',
+    opcoes: [
+      'Paz Mental & Fim da Compulsão',
+      'Comer Sem Culpa',
+      'Autonomia Alimentar',
+      'Organização dos Horários'
+    ]
+  },
+  esporte_performance: {
+    rotulo: 'Performance Esportiva / Ganho de Massa',
+    opcoes: [
+      'Hipertrofia & Definição',
+      'Ganho de Força e Carga',
+      'Recuperação Rápida',
+      'Ajuste de Composição Corporal'
+    ]
+  },
+  fases_da_vida: {
+    rotulo: 'Fases da Vida (Gestação, Menopausa, etc.)',
+    opcoes: [
+      'Alívio de Sintomas Hormonais',
+      'Nutrição Segura & Suporte',
+      'Vitalidade & Massa Magra',
+      'Praticidade no Dia a Dia'
+    ]
+  },
+  restricoes_estilo_vida: {
+    rotulo: 'Restrições Alimentares / Estilo de Vida',
+    opcoes: [
+      'Transição Alimentar Segura',
+      'Eliminação de Desconfortos',
+      'Variedade & Prazer ao Comer',
+      'Adequação de Estilo de Vida'
+    ]
+  }
+};

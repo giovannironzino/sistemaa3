@@ -60,12 +60,15 @@ export interface DistribuicaoObjecao {
   outra_justificativa: number;
 }
 
+export type SlaAtendimentoComercial = 'imediato_15min' | 'ate_1h' | 'mesmo_dia' | 'mais_24h';
+
 export interface Fase03State {
   totalNaoConvertidosRef: number;                 // copiado de ResumoCaptacao.totalNaoConvertidos no início da fase, somente leitura
   semNaoConvertidos: boolean;                      // true se totalNaoConvertidosRef === 0
   distribuicaoGargalo: DistribuicaoGargalo | null; // null se semNaoConvertidos === true
   distribuicaoObjecao: DistribuicaoObjecao | null; // null se semNaoConvertidos === true
   etapasMarcadas: EtapaAtendimentoId[];
+  slaPrimeiroAtendimentoComercial?: SlaAtendimentoComercial | null; // tempo de resposta ao primeiro contato no WhatsApp
   atitudeFollowUp: AtitudeFollowUp | null;
   quantidadeTentativas: QuantidadeTentativas | null;            // preenchido somente se atitudeFollowUp === 'recontato_ativo'
   intervaloPrimeiroRecontato: IntervaloPrimeiroRecontato | null; // idem

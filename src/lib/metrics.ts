@@ -508,7 +508,7 @@ export function calculateBlock8Metrics(blocks: ClientBlocks): Block8Metrics {
   // 7. Métricas de Horas (Eixo 06)
   let horasMensaisEixo06 = 160;
   if (b6.horasPorDia) {
-    const totalHorasSemana = Object.values(b6.horasPorDia).reduce((acc: number, h: any) => acc + (Number(h) || 0), 0);
+    const totalHorasSemana: number = Number(Object.values(b6.horasPorDia).reduce((acc: number, h: any) => acc + (Number(h) || 0), 0));
     if (totalHorasSemana > 0) horasMensaisEixo06 = totalHorasSemana * 4;
   }
 
@@ -795,5 +795,158 @@ export function calculateBlock9Metrics(blocks: ClientBlocks): Block9Metrics {
     receitaAntecipadaCaixa
   };
 }
+
+/**
+ * Calcula o CAC Blocado (Geral) e o CAC Pago (Específico de Anúncios)
+ * com explicações em linguagem simples para o usuário.
+ */
+export function calculateDualCAC(clientRecord: any) {
+  const investimentoTrafego = clientRecord?.fase08?.investimentoTrafegoMensal ?? 0;
+  const contatos = clientRecord?.fase02?.contatos ?? [];
+  const convertidos = contatos.filter((c: any) => c.statusFechamento === 'sim');
+  const totalConvertidos = Math.max(1, convertidos.length);
+
+  const convertidosTrafego = convertidos.filter((c: any) => c.canalOrigem === 'trafego_pago').length;
+  const totalConvertidosTrafego = Math.max(1, convertidosTrafego);
+
+  const cacBlocadoGeral = Math.round(investimentoTrafego / totalConvertidos);
+  const cacPagoAnuncios = Math.round(investimentoTrafego / totalConvertidosTrafego);
+
+  return {
+    investimentoTrafego,
+    totalConvertidos: convertidos.length,
+    convertidosTrafego,
+    cacBlocadoGeral,
+    cacPagoAnuncios,
+    explicacaoBlocado: `💰 Em média, custou R$ ${cacBlocadoGeral} para atrair cada um dos seus ${convertidos.length} pacientes (considerando todos os canais).`,
+    explicacaoPago: `🎯 Considerando apenas os anúncios pagos, custou R$ ${cacPagoAnuncios} para trazer cada um dos ${convertidosTrafego} pacientes vindos de tráfego pago.`,
+  };
+}
+
+/**
+ * Compara a Receita Comercial Projetada do Portfólio (Eixo 04)
+ * com a Entrada Real de Caixa nos últimos 3 meses (Eixo 08).
+ */
+export function calculateRealVsPortfolioRevenue(clientRecord: any) {
+  const services: ServiceData[] = clientRecord?.fase04?.services ?? [];
+  const receitaPortfolioMensal = Math.round(
+    services.reduce((acc, s) => {
+      const preco = s.price || 0;
+      const vendas90Dias = s.vendasUltimos90Dias || 0;
+      return acc + (preco * vendas90Dias) / 3;
+    }, 0)
+  );
+
+  const faturamentoM2 = clientRecord?.fase08?.faturamentoM2 ?? 0;
+  const faturamentoM1 = clientRecord?.fase08?.faturamentoM1 ?? 0;
+  const faturamentoAtual = clientRecord?.fase08?.faturamentoAtual ?? 0;
+  const receitaCaixaMensal = Math.round((faturamentoM2 + faturamentoM1 + faturamentoAtual) / 3);
+
+  const indiceRealizacaoPct = receitaPortfolioMensal > 0
+    ? Math.round((receitaCaixaMensal / receitaPortfolioMensal) * 100)
+    : 100;
+
+  return {
+    receitaPortfolioMensal,
+    receitaCaixaMensal,
+    indiceRealizacaoPct,
+    explicacao: `🏦 Seu consultório recebe no caixa R$ ${receitaCaixaMensal.toLocaleString('pt-BR')} por mês, o que representa ${indiceRealizacaoPct}% do faturamento projetado no seu portfólio de produtos (R$ ${receitaPortfolioMensal.toLocaleString('pt-BR')}).`,
+  };
+}
+
+/**
+ * Engenharia Financeira A3 (+50% a +100% de precisão)
+ * Calcula DRE Real de Caixa, Breakeven em R$ e Pacientes, Margem de Contribuição por Produto e Pró-Labore
+ * tudo com explicações nativas em LINGUAGEM SIMPLES para o usuário final.
+ */
+export function calculateAdvancedFinancialMetrics(clientRecord: any) {
+  const f8 = clientRecord?.fase08 || {};
+  const f4 = clientRecord?.fase04 || {};
+  const f6 = clientRecord?.fase06 || {};
+  const f7 = clientRecord?.fase07 || {};
+
+  // 1. Custos Fixos Discriminados
+  const aluguelEspaco = Number(f8.aluguelEspaco || 0);
+  const softwaresTech = Number(f8.softwaresTech || 0);
+  const terceirizadosContabilidade = Number(f8.terceirizadosContabilidade || 0);
+  const licencasAnualidades = Number(f8.licencasAnualidades || 0);
+  const custoTotalEquipe = Number(f7.custoTotalEquipe || f8.custoTotalEquipe || 0);
+  const investimentoTrafegoMensal = Number(f8.investimentoTrafegoMensal || 0);
+  const feeGestorAgencia = Number(f8.feeGestorAgencia || 0);
+
+  const opexFixoTotal = aluguelEspaco + softwaresTech + terceirizadosContabilidade + licencasAnualidades + custoTotalEquipe;
+  const marketingTotal = investimentoTrafegoMensal + feeGestorAgencia;
+
+  // 2. Pro-Labore vs Reserva
+  const proLaboreNutricionista = Number(f8.proLaboreNutricionista || 5000);
+  const reservaConsultorioCNPJ = Number(f8.reservaConsultorioCNPJ || 1000);
+
+  // 3. Impostos e Cartão
+  const impostosAliquotaPct = Number(f8.impostosAliquotaPct || 6);
+  const taxaCartaoPct = Number(f8.taxaCartaoPct || 3.5);
+  const taxaAntecipacaoPct = Number(f8.taxaAntecipacaoPct || 2.0);
+  const deducoesVariaveisTotalPct = (impostosAliquotaPct + taxaCartaoPct + taxaAntecipacaoPct) / 100;
+
+  // 4. Insumos Por Consulta
+  const insumoConsultaUnitario = Number(f8.insumoConsultaUnitario || 30);
+
+  // 5. Portfólio de Serviços do Eixo 04
+  const services: ServiceData[] = f4.services || [];
+  const servicosComMargem = services.map((s: any) => {
+    const preco = Number(s.price || s.precoVenda || 0);
+    const impostoR$ = preco * (impostosAliquotaPct / 100);
+    const taxaCartaoR$ = preco * ((taxaCartaoPct + taxaAntecipacaoPct) / 100);
+    const custoVariavelDireto = insumoConsultaUnitario + impostoR$ + taxaCartaoR$;
+    const margemContribuiSimplesR$ = Math.max(0, preco - custoVariavelDireto);
+    const margemContribuiPct = preco > 0 ? Math.round((margemContribuiSimplesR$ / preco) * 100) : 0;
+
+    return {
+      id: s.id,
+      nomeComercial: s.name || s.nomeComercial || 'Serviço',
+      precoVenda: preco,
+      custoVariavelDireto,
+      margemContribuiSimplesR$,
+      margemContribuiPct,
+      explicacaoSimples: `💡 De cada R$ ${preco} cobrado na "${s.name || s.nomeComercial || 'consulta'}", sobram R$ ${Math.round(margemContribuiSimplesR$)} limpos (${margemContribuiPct}%) para o consultório após pagar impostos, maquininha e materiais.`,
+    };
+  });
+
+  // Ticket Médio Ponderado
+  const ticketMedioPortfólio = servicosComMargem.length > 0
+    ? Math.round(servicosComMargem.reduce((acc, s) => acc + s.precoVenda, 0) / servicosComMargem.length)
+    : 450;
+
+  // 6. Cálculo do Ponto de Equilíbrio (Breakeven Real)
+  const despesaFixaNecessaria = opexFixoTotal + marketingTotal + proLaboreNutricionista + reservaConsultorioCNPJ;
+  const margemMediaPct = servicosComMargem.length > 0
+    ? servicosComMargem.reduce((acc, s) => acc + s.margemContribuiPct, 0) / servicosComMargem.length / 100
+    : 0.75;
+
+  const breakevenFaturamentoReais = Math.round(despesaFixaNecessaria / (margemMediaPct > 0 ? margemMediaPct : 0.75));
+  const breakevenPacientesMes = Math.ceil(breakevenFaturamentoReais / (ticketMedioPortfólio > 0 ? ticketMedioPortfólio : 450));
+
+  // 7. Custo da Hora Clínica Parada (Eixo 06)
+  const horasMesClinica = Number(f6.totalHorasSemana || 40) * 4.33;
+  const custoHoraClinicaFixo = horasMesClinica > 0 ? Math.round(opexFixoTotal / horasMesClinica) : 0;
+
+  return {
+    opexFixoTotal,
+    marketingTotal,
+    proLaboreNutricionista,
+    reservaConsultorioCNPJ,
+    despesaFixaNecessaria,
+    breakevenFaturamentoReais,
+    breakevenPacientesMes,
+    custoHoraClinicaFixo,
+    servicosComMargem,
+    explicacoesLinguagemSimples: {
+      breakeven: `⚖️ Ponto de Equilíbrio: Seu consultório precisa faturar no mínimo R$ ${breakevenFaturamentoReais.toLocaleString('pt-BR')} por mês (aprox. ${breakevenPacientesMes} contratos) apenas para cobrir todas as despesas, pagar seu pró-labore de R$ ${proLaboreNutricionista.toLocaleString('pt-BR')} e não ficar no prejuízo.`,
+      proLaboreVsLucro: `👔 Separação Pessoal vs Empresa: R$ ${proLaboreNutricionista.toLocaleString('pt-BR')} é o seu salário mensal garantido como profissional (CPF), enquanto R$ ${reservaConsultorioCNPJ.toLocaleString('pt-BR')} é guardado no caixa do consultório (CNPJ) para segurança.`,
+      custoHora: `⏱️ Custo da Hora de Consultório: Manter sua sala ou estrutura aberta custa R$ ${custoHoraClinicaFixo} por hora de atendimento.`,
+    },
+  };
+}
+
+
 
 

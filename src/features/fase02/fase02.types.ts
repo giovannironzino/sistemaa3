@@ -55,9 +55,8 @@ export interface Fase02State {
   totalPacientesSistemaProntuario: number | null;  // resposta da nova pergunta na Tela 4, opcional
   reconciliacaoPendenteQuantidade: number;         // calculado — 0 se não houver diferença a reconciliar
 
-  // NOVO CAMPO — redesign da tela de Reconciliação (independente da emenda de prontuário
-  // acima): "ficou faltando cadastrar alguém que você lembrou agora?" — permite adicionar
-  // manualmente pessoas avulsas, sem depender de um número do sistema de prontuário.
+  // NOVO CAMPO — Estimativa Macro de Leads Perdidos (para não exigir digitação manual de quem deu ghosting)
+  estimativaLeadsNaoConvertidosQtd?: number;
   reconcileAnswer?: '' | 'sim' | 'nao';
 }
 

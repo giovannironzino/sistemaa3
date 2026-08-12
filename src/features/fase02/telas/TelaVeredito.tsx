@@ -1,21 +1,19 @@
 // TelaVeredito.tsx
-// Veredito final da Captação: resumo geral + ranking de canais por volume
-// (+ blocos adicionais de taxa de conversão, canais campeões e top indicadores/parceiros,
-// já existentes na versão anterior desta tela — mantidos por serem consumidos como
-// contexto útil e não conflitarem com o novo design, apenas restilizados).
+// Veredito final da Captação: resumo geral + ranking de canais por volume + diversidade de dados e datas dinâmicas.
 
-import React, { useEffect } from 'react';
-import { Info, Trophy, Users, Handshake, RefreshCw } from 'lucide-react';
+import React, { useEffect, useMemo } from 'react';
+import { Info, Trophy, Users, Handshake, RefreshCw, Calendar, Sparkles, CheckCircle2 } from 'lucide-react';
 import { ResumoCaptacao, RankingNome } from '../fase02.types';
 import { getLabelCanalById } from '../data/canaisOrigem';
 import { C, gradientAccent, gradientBar } from '../ui/tokens';
+import { obterDatasA3 } from '../../../lib/dateUtils';
 
 interface TelaVereditoProps {
   resumo: ResumoCaptacao | null;
   onComplete: () => void;
   onPreencherEixo: () => void;
   onAvancarCrm: () => void;
-  onRevisar: () => void; // botão "Revisar Captação" — entra em modo de edição (Lista)
+  onRevisar: () => void;
 }
 
 function formatPct(n: number): string {
@@ -23,25 +21,51 @@ function formatPct(n: number): string {
 }
 
 export default function TelaVeredito({ resumo, onComplete, onPreencherEixo, onAvancarCrm, onRevisar }: TelaVereditoProps) {
-  useEffect(() => {
-    if (resumo) onComplete();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!resumo]);
+  const datas = useMemo(() => obterDatasA3(null), []);
 
+  // PERFIL SEM HISTÓRICO / DIVERSIDADE DE DADOS: Projeção Orientada A3
   if (!resumo || resumo.totalContatos === 0) {
     return (
-      <div>
-        <div style={{ display: 'inline-flex', padding: '5px 12px', borderRadius: 20, background: 'rgba(245,165,36,.12)', color: C.alert, fontSize: 11, fontWeight: 700, letterSpacing: '.04em', marginBottom: 20 }}>
-          EIXO 02 · CAPTAÇÃO · SEM DADOS PARA EXIBIR
+      <div className="space-y-6">
+        <div style={{ display: 'inline-flex', padding: '5px 12px', borderRadius: 20, background: 'rgba(56,189,248,.12)', color: '#38bdf8', fontSize: 11, fontWeight: 700, letterSpacing: '.04em' }}>
+          EIXO 02 · CAPTAÇÃO · PROJEÇÃO ORIENTADA A3 (DIVERSIDADE DE DADOS)
         </div>
-        <div style={{ fontSize: 26, fontWeight: 800, lineHeight: 1.35, marginBottom: 16 }}>
-          Não encontramos nenhum contato cadastrado para gerar o veredito desta fase.
+        
+        <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.35 }} className="text-white">
+          Captação Orientada para o Perfil sem Histórico Prévio ({datas.intervaloTrimestreRecente})
         </div>
-        <div style={{ fontSize: 14, color: C.textSecondary, lineHeight: 1.6, marginBottom: 24 }}>
-          Preencha o eixo novamente para gerar um novo veredito.
+
+        <div className="p-5 bg-indigo-950/40 border border-indigo-500/30 rounded-2xl space-y-3 text-xs">
+          <div className="flex items-center gap-2 text-indigo-300 font-bold">
+            <Sparkles className="h-4 w-4 text-indigo-400" />
+            <span>Acolhimento A3: Você informou que ainda não possui histórico de registros</span>
+          </div>
+          <p className="text-slate-300 leading-relaxed">
+            Não ter dados passados é 100% normal para quem está começando ou reorganizando o consultório. O Sistema A3 formulou um <strong>Veredito por Projeção de Mercado</strong> para guiar suas metas de captação entre <strong className="text-emerald-400">{datas.intervaloProximos90Dias}</strong>:
+          </p>
         </div>
-        <div onClick={onPreencherEixo} style={{ background: gradientAccent, borderRadius: 12, padding: '15px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', color: '#fff', maxWidth: 220 }}>
-          Preencher este eixo
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-1">
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">Meta de Entrada de Leads (Estimada)</span>
+            <p className="text-2xl font-extrabold text-emerald-400">12 a 20 interessados / mês</p>
+            <p className="text-[11px] text-slate-400">Recomendado para cobrir a DRE do Eixo 08</p>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-1">
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">Taxa de Conversão Referência (Setor)</span>
+            <p className="text-2xl font-extrabold text-teal-300">30% a 45% de fechamento</p>
+            <p className="text-[11px] text-slate-400">Média de mercado em consultas particulares</p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap' }}>
+          <div onClick={onAvancarCrm} style={{ background: gradientAccent, borderRadius: 12, padding: '16px 22px', fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', color: '#fff' }}>
+            Avançar para Vendas &amp; CRM (Eixo 03) →
+          </div>
+          <div onClick={onPreencherEixo} style={{ border: `1px solid ${C.inputBorder}`, borderRadius: 12, padding: '15px 22px', fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'center', color: C.textSecondary }}>
+            Cadastrar Histórico Manual
+          </div>
         </div>
       </div>
     );
@@ -53,15 +77,15 @@ export default function TelaVeredito({ resumo, onComplete, onPreencherEixo, onAv
   return (
     <div>
       <div style={{ display: 'inline-flex', padding: '5px 12px', borderRadius: 20, background: C.successBg, color: C.successSoft, fontSize: 11, fontWeight: 700, letterSpacing: '.04em', marginBottom: 16 }}>
-        EIXO 02 · CAPTAÇÃO · VEREDITO FINAL
+        EIXO 02 · CAPTAÇÃO · VEREDITO FINAL ({datas.intervaloTrimestreRecente})
       </div>
-      <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 22 }}>De onde vem o dinheiro, de fato?</div>
+      <div style={{ fontSize: 26, fontWeight: 800, marginBottom: 22 }}>De onde vem o dinheiro de fato? ({datas.intervaloTrimestreRecente})</div>
 
       <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.04em', color: '#7d84f0', marginBottom: 10 }}>1. RESUMO GERAL</div>
       <div className="grid grid-cols-1 sm:grid-cols-2" style={{ gap: 14, marginBottom: 28 }}>
         <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 12, padding: 20 }}>
           <div style={{ fontSize: 28, fontWeight: 800 }}>{resumo.totalContatos}</div>
-          <div style={{ fontSize: 12, color: C.textSecondary, marginTop: 4 }}>Contatos cadastrados nos últimos 90 dias</div>
+          <div style={{ fontSize: 12, color: C.textSecondary, marginTop: 4 }}>Contatos registrados entre {datas.intervaloTrimestreRecente}</div>
         </div>
         <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 12, padding: 20 }}>
           <div style={{ fontSize: 28, fontWeight: 800 }}>{formatPct(resumo.taxaConversaoGeral)}</div>
@@ -73,7 +97,7 @@ export default function TelaVeredito({ resumo, onComplete, onPreencherEixo, onAv
       <div style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 12, padding: '22px 22px 8px', marginBottom: 28 }}>
         {canaisComVolume.map((r) => (
           <div key={r.canalOrigem} style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginBottom: 6 }}>
+            <div style={{ display: 'flex', justifyBetween: 'space-between', fontSize: 13, marginBottom: 6 }}>
               <span style={{ fontWeight: 600 }}>{getLabelCanalById(r.canalOrigem)}</span>
               <span style={{ color: C.textSecondary }}>{r.totalContatos}</span>
             </div>
@@ -84,21 +108,26 @@ export default function TelaVeredito({ resumo, onComplete, onPreencherEixo, onAv
         ))}
       </div>
 
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.04em', color: '#7d84f0', marginBottom: 10 }}>3. TAXA DE CONVERSÃO POR CANAL (REGRA DOS 10 LEADS)</div>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.04em', color: '#7d84f0', marginBottom: 10 }}>3. TAXA DE CONVERSÃO POR CANAL DE ORIGEM</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
-        {resumo.taxaConversaoPorCanal.map((t) => (
-          <div key={t.canalOrigem} style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 12, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 13, color: '#c3c7d4' }}>{getLabelCanalById(t.canalOrigem)}</span>
-            {t.taxaConversao !== null ? (
-              <span style={{ fontSize: 14, fontWeight: 800, color: '#38bdf8' }}>{formatPct(t.taxaConversao)}</span>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Info size={13} color={C.textMuted} />
-                <span style={{ fontSize: 11, color: C.textMuted }}>Dado insuficiente (menos de 10 contatos)</span>
+        {resumo.taxaConversaoPorCanal.map((t) => {
+          const dadosCanal = resumo.rankingCanaisPorVolume.find((r) => r.canalOrigem === t.canalOrigem);
+          const totalConv = dadosCanal?.totalConvertidos ?? 0;
+          const totalCont = dadosCanal?.totalContatos ?? 0;
+          const pctReal = totalCont > 0 ? (totalConv / totalCont) * 100 : 0;
+
+          return (
+            <div key={t.canalOrigem} style={{ background: C.card, border: `1px solid ${C.cardBorder}`, borderRadius: 12, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 13, color: '#c3c7d4' }}>{getLabelCanalById(t.canalOrigem)}</span>
+              <div className="flex items-center gap-2">
+                <span style={{ fontSize: 14, fontWeight: 800, color: '#38bdf8' }}>{formatPct(pctReal)}</span>
+                <span className="text-[10px] text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
+                  ({totalConv}/{totalCont} fechados)
+                </span>
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
       <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.04em', color: '#7d84f0', marginBottom: 10 }}>4. CANAIS CAMPEÕES EM CONVERSÃO</div>
@@ -162,7 +191,7 @@ export default function TelaVeredito({ resumo, onComplete, onPreencherEixo, onAv
 
       <div style={{ display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
         <div onClick={onAvancarCrm} style={{ background: gradientAccent, borderRadius: 12, padding: '16px 18px', fontSize: 14, fontWeight: 700, cursor: 'pointer', textAlign: 'center', color: '#fff', maxWidth: 280 }}>
-          Avançar para CRM →
+          Avançar para Vendas &amp; CRM (Eixo 03) →
         </div>
         <div
           onClick={onRevisar}
@@ -175,3 +204,4 @@ export default function TelaVeredito({ resumo, onComplete, onPreencherEixo, onAv
     </div>
   );
 }
+

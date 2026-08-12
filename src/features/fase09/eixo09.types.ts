@@ -58,6 +58,7 @@ export interface SimuladorState {
   card2Ativo: boolean;
   reajusteValorReais: number;
   taxaSaidaEsperadaPercentual: number;
+  reajustePorServico?: Record<string, { reajusteValorReais: number; taxaSaidaPercentual: number }>; // elasticidade por tipo de produto do Eixo 04
 
   // Card 3 — Migração de Planos
   card3Ativo: boolean;

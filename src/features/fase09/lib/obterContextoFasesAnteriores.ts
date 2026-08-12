@@ -1,5 +1,5 @@
 // obterContextoFasesAnteriores.ts
-// Extrai dados acumulados das fases anteriores (02, 04, 06, 08) do clientRecord.
+// Extrai dados acumulados das fases anteriores (01 a 08) do clientRecord.
 
 export interface ServicoSimplificado {
   id: string;
@@ -8,6 +8,9 @@ export interface ServicoSimplificado {
   pacientesAtivosVigentes: number;
   formatoComercial: string;
   duracaoMeses: number;
+  duracaoContratoMeses?: number;
+  modalidadeAtendimento?: string;
+  vendasUltimos90Dias?: number;
 }
 
 export interface ContextoFasesAnteriores {
@@ -21,6 +24,13 @@ export interface ContextoFasesAnteriores {
   taxaConversaoGeral: number;
   tetoSemanaPerfeitaPadrao: number;
   servicos: ServicoSimplificado[];
+  pacientesMapeados?: any[];
+  membrosEquipe?: any[];
+  totalPacientesInativos?: number;
+  // Eixo 02 — Captação
+  leadsMensaisMedia: number;       // média histórica de contatos por mês (últimos 3 meses)
+  canaisCampeoes: string[];        // top 3 canais por conversão real
+  totalContatosCaptacao: number;   // total de contatos registrados no período
 }
 
 function parseDuracaoMeses(duracaoStr?: string): number {
@@ -95,6 +105,9 @@ export function obterContextoFasesAnteriores(clientRecord: any): ContextoFasesAn
     pacientesAtivosVigentes: Number(s.pacientesAtivosVigentes ?? s.activePatients ?? 0),
     formatoComercial: s.formatoComercial || s.format || '',
     duracaoMeses: parseDuracaoMeses(s.duracaoContrato),
+    duracaoContratoMeses: parseDuracaoMeses(s.duracaoContrato),
+    modalidadeAtendimento: s.modalidadeAtendimento || s.modality || 'Híbrido',
+    vendasUltimos90Dias: Number(s.vendasUltimos90Dias ?? 0),
   }));
 
   const resumoServicos = f4?.ResumoServicos;
@@ -117,10 +130,18 @@ export function obterContextoFasesAnteriores(clientRecord: any): ContextoFasesAn
     }
   }
 
+  // --- Fase 01, 02, 05, 06, 07 Extra Data ---
+  const pacientesMapeados = clientRecord?.fase01?.pacientesMapeados ?? [];
+  const membrosEquipe = clientRecord?.fase07?.membros ?? [];
+  const totalPacientesInativos = Number(clientRecord?.fase05?.totalPacientesInativos ?? 10);
+
   // --- Fase 02 (Captação) ---
   const f2 = clientRecord?.fase02;
   const resumoCaptacao = f2?.ResumoCaptacao;
   const taxaConversaoGeral = resumoCaptacao?.taxaConversaoGeral ?? f2?.taxaConversaoGeral ?? 20;
+  const leadsMensaisMedia = resumoCaptacao?.leadsMensaisMedia ?? 0;
+  const canaisCampeoes: string[] = resumoCaptacao?.canaisCampeoes ?? [];
+  const totalContatosCaptacao: number = resumoCaptacao?.totalContatos ?? 0;
 
   // --- Fase 06 (Agenda) ---
   const f6 = clientRecord?.fase06;
@@ -137,5 +158,12 @@ export function obterContextoFasesAnteriores(clientRecord: any): ContextoFasesAn
     taxaConversaoGeral,
     tetoSemanaPerfeitaPadrao,
     servicos,
+    pacientesMapeados,
+    membrosEquipe,
+    totalPacientesInativos,
+    leadsMensaisMedia,
+    canaisCampeoes,
+    totalContatosCaptacao,
   };
 }
+

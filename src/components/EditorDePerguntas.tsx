@@ -53,7 +53,7 @@ export default function EditorDePerguntas() {
   const handleAddQuestion = () => {
     const newQuestion: QuestionSchema = {
       id: `q_${Date.now()}`,
-      question: 'Nova Pergunta Diagnóstica',
+      text: 'Nova Pergunta Diagnóstica',
       type: 'choice',
       options: ['Opção 1', 'Opção 2']
     };

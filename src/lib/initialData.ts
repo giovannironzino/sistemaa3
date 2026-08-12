@@ -649,18 +649,6 @@ export const DEFAULT_EIXOS_SCHEMA: EixoSchema[] = [
           'Não envio mais nenhuma mensagem: Aguardo o cliente voltar a entrar em contato por conta própria.',
           'Realizo acompanhamento / recontato ativo: Envio novas mensagens para tentar retomar a conversa.'
         ]
-      },
-      {
-        id: 16,
-        text: 'Quais os motivos mais comuns para o cliente não fechar?',
-        type: 'Múltipla escolha',
-        options: [
-          'Preço achado alto',
-          'Falta de horário na agenda',
-          'Formato (online/presencial)',
-          'Decisão adiada',
-          'Concorrência'
-        ]
       }
     ]
   },
