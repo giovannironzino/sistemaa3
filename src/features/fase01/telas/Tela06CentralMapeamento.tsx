@@ -28,6 +28,7 @@ interface Tela06CentralMapeamentoProps {
 
 type MesKey = 'mesM2' | 'mesM1' | 'mesM0';
 
+import BoxMatchDeDados from '../../../components/BoxMatchDeDados';
 import CestaDeDadosDrawer from '../../../components/CestaDeDadosDrawer';
 import TelaConfirmacaoCesta from '../../../components/TelaConfirmacaoCesta';
 import { alagarDadosDaCestaNoSistema } from '../../../lib/alagamentoRelatorioService';
@@ -43,6 +44,7 @@ export default function Tela06CentralMapeamento({
   const datas = useMemo(() => obterDatasA3(null), []);
   const [pacientes, setPacientes] = useState<PacienteMapeadoEixo01[]>(pacientesIniciais);
   const [pacienteEmEdicaoId, setPacienteEmEdicaoId] = useState<string | null>(null);
+  const [itensMatchPendentes, setItensMatchPendentes] = useState<ItemCestaExtraido[]>([]);
 
   // Passo 0 State
   const [nomeConsultorio, setNomeConsultorio] = useState(nomeConsultorioInicial);
@@ -172,6 +174,43 @@ export default function Tela06CentralMapeamento({
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8" id="tela_central_mapeamento">
+      {/* ── BOX QUE SALTA À TELA: Match de Dados A3 (2 Colunas) ── */}
+      {itensMatchPendentes.length > 0 && (
+        <BoxMatchDeDados
+          tituloEixo="Eixo 01 · Promessa &amp; Atendimentos"
+          itens={itensMatchPendentes}
+          onIgnorar={() => setItensMatchPendentes([])}
+          onConfirmarItem={(item) => {
+            const novoPac: PacienteMapeadoEixo01 = {
+              id: `pac_match_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+              nome: item.nome,
+              dorId: (item.dorId as ClusterId) || 'estetica_emagrecimento',
+              pilarForte: 'Liberdade & Praticidade',
+              elementoDiferencial: 'Transformação Visual',
+              ticketPagoEstimado: item.valor || 450,
+              mesAtendimento: item.mesAtendimento || 'mesM0',
+              createdAt: new Date().toISOString(),
+            };
+            setPacientes((prev) => [...prev, novoPac]);
+            setItensMatchPendentes((prev) => prev.filter((i) => i.id !== item.id));
+          }}
+          onConfirmarTodos={(confirmados) => {
+            const novosPacs: PacienteMapeadoEixo01[] = confirmados.map((item, idx) => ({
+              id: `pac_match_all_${Date.now()}_${idx}`,
+              nome: item.nome,
+              dorId: (item.dorId as ClusterId) || 'estetica_emagrecimento',
+              pilarForte: 'Liberdade & Praticidade',
+              elementoDiferencial: 'Transformação Visual',
+              ticketPagoEstimado: item.valor || 450,
+              mesAtendimento: item.mesAtendimento || 'mesM0',
+              createdAt: new Date().toISOString(),
+            }));
+            setPacientes((prev) => [...prev, ...novosPacs]);
+            setItensMatchPendentes([]);
+          }}
+        />
+      )}
+
       {/* ── PASSO 0: Meu Cadastro & Setup do Software de Prontuário ── */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 rounded-2xl p-6 space-y-5 shadow-2xl">
         <div className="flex items-center justify-between border-b border-white/10 pb-4 flex-wrap gap-3">
@@ -575,7 +614,10 @@ export default function Tela06CentralMapeamento({
           onProcessado={(resultado) => {
             setCestaDrawerOpen(false);
             setResultadoCesta(resultado);
-            setConfirmacaoCestaOpen(true);
+            setItensMatchPendentes(resultado.itens);
+            if (resultado.totalPacientesAtivosDetectados) {
+              setTotalAtivosCustom(resultado.totalPacientesAtivosDetectados);
+            }
           }}
         />
       )}
