@@ -6,7 +6,7 @@ export interface DespesaFixaItem {
   categoria: 'software' | 'equipe' | 'estrutura' | 'imposto' | 'marketing' | 'outros';
   descricao: string;
   valorMensal: number;
-  origemAutomatico?: string; // Ex: 'Eixo 07 (Folha)', 'Eixo 01 & 06'
+  origemAutomatico?: string; // Ex: 'Eixo 07 (Folha)', 'Eixos 01 & 06 (Software)'
 }
 
 export interface FaturamentoMensalHistorico {
@@ -44,15 +44,19 @@ export interface ResultadoDreExecutiva {
 
 export function calcularDreExecutiva(
   despesasFixas: DespesaFixaItem[],
-  faturamentoBrutoInput: number = 22500,
+  faturamentoBrutoInput?: number,
   pacientesAtivosContagem: number = 38,
   ticketMedioInput: number = 450,
   insumoPorConsultaInput: number = 15,
   proLaboreInput: number = 5000,
   historicoInput: FaturamentoMensalHistorico[] = []
 ): ResultadoDreExecutiva {
-  const faturamentoBrutoMensal = Math.max(0, faturamentoBrutoInput);
-  const entradasReaisCaixa = Math.max(0, faturamentoBrutoMensal * 0.96); // ~96% das vendas convertidas em caixa imediato
+  // Cálculo automático do Faturamento Comercial (se não fornecido override)
+  const faturamentoBrutoMensal = typeof faturamentoBrutoInput === 'number' && faturamentoBrutoInput > 0
+    ? faturamentoBrutoInput
+    : Math.max(0, pacientesAtivosContagem * ticketMedioInput);
+
+  const entradasReaisCaixa = Math.max(0, Number((faturamentoBrutoMensal * 0.94).toFixed(2))); // ~94% convertido em caixa no mês
   const ticketMedio = Math.max(1, ticketMedioInput);
 
   // Categorização das Despesas Fixas (Tabela CRUD)
@@ -68,12 +72,12 @@ export function calcularDreExecutiva(
 
   const despesasFixasTotaisMensais = Math.max(0, despesasEquipeFolhaMensal + despesasSoftwareMensal + despesasEstruturaMensal);
 
-  // Impostos (~6% Simples) & Taxas de Cartão (~3.5%)
+  // Impostos (~6% Simples Nacional) & Taxas de Cartão (~3.5%)
   const impostoCnpjSimplesMensal = Number((faturamentoBrutoMensal * 0.06).toFixed(2));
   const taxasCartaoMensal = Number((faturamentoBrutoMensal * 0.035).toFixed(2));
   const impostosETaxasMensais = Number((impostoCnpjSimplesMensal + taxasCartaoMensal).toFixed(2));
 
-  // Insumos Diretos por Consulta (ex: R$ 15/consulta * quantidade de consultas)
+  // Insumos Diretos por Consulta
   const estimativaConsultasMensais = Math.round(pacientesAtivosContagem * 1.5);
   const insumosDiretosConsultasMensal = Number((insumoPorConsultaInput * estimativaConsultasMensais).toFixed(2));
 
