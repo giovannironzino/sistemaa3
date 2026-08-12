@@ -1,19 +1,20 @@
 // Fase08Flow.tsx
 // Redesenho Mestre do Eixo 08 — Financeiro, Caixa Real & DRE em LINGUAGEM SIMPLES.
-// 100% Analítico e Neutro (Sem Simuladores nem Dicas — Simulação Exclusiva do Eixo 09).
-// Incorpora: DRE Clássica Executiva A3, Tabela CRUD Livre de Custos Fixos, Insumos por Consulta, Pró-Labore, Histórico dos 12 Meses e Precificação Unit Economics.
+// Incorpora: Contas a Receber (90 Dias), Edição Livre dos Dados Importados, DRE Clássica Executiva A3, Tabela CRUD Livre de Custos Fixos e Precificação.
 
 import React, { useState, useMemo } from 'react';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { DollarSign, Plus, Trash2, CheckCircle2, ArrowRight, Sparkles, Layers, Scale, Calculator, Tag, Calendar, ChevronDown, ChevronUp, Wallet, Receipt } from 'lucide-react';
+import { DollarSign, Plus, Trash2, CheckCircle2, ArrowRight, Sparkles, Layers, Scale, Calculator, Tag, Calendar, ChevronDown, ChevronUp, Wallet, Receipt, CreditCard, Edit3, UserCheck, ShieldCheck } from 'lucide-react';
 import { calcularDreExecutiva, DespesaFixaItem, FaturamentoMensalHistorico } from './lib/calcularDreExecutiva';
 import { calcularPrecificacaoServicos } from './lib/calcularPrecificacaoServicos';
+import { calcularContasAReceber, FormaPagamentoPaciente } from './lib/calcularContasAReceber';
 
 interface Fase08FlowProps {
   uid: string;
   initialState?: any;
   pacientesEixo01Count?: number;
+  pacientesEixo01List?: Array<{ id: string; nome: string; ticketPagoEstimado?: number }>;
   custoFolhaEixo07?: number;
   custoEquipeEixo07?: number;
   clientRecord?: any;
@@ -25,6 +26,7 @@ export default function Fase08Flow({
   uid,
   initialState,
   pacientesEixo01Count = 38,
+  pacientesEixo01List = [],
   custoFolhaEixo07,
   custoEquipeEixo07 = 3200,
   servicosEixo04 = [],
@@ -34,6 +36,13 @@ export default function Fase08Flow({
   const [faturamentoInput, setFaturamentoInput] = useState<number>(initialState?.faturamentoBrutoMensal ?? 22500);
   const [insumosPorConsultaInput, setInsumosPorConsultaInput] = useState<number>(initialState?.insumoPorConsulta ?? 15);
   const [proLaboreInput, setProLaboreInput] = useState<number>(initialState?.proLaborePessoal ?? 5000);
+
+  // Módulo de Contas a Receber: Formas de Pagamento por Paciente
+  const [formasPagamentoOverride, setFormasPagamentoOverride] = useState<
+    Record<string, { forma: FormaPagamentoPaciente; parcelas: number }>
+  >(() => {
+    return initialState?.formasPagamentoOverride || {};
+  });
 
   // Toggle do Histórico dos 12 Meses
   const [exibirHistorico12Meses, setExibirHistorico12Meses] = useState<boolean>(false);
@@ -54,6 +63,9 @@ export default function Fase08Flow({
     ];
   });
 
+  // Estado para Edição Livre de Valores Importados (Modal / Cards)
+  const [editandoImportados, setEditandoImportados] = useState<boolean>(false);
+
   // Form de Adição de Nova Linha Livre de Custo Fixo
   const [descricaoNova, setDescricaoNova] = useState('');
   const [valorNovo, setValorNovo] = useState('');
@@ -61,6 +73,10 @@ export default function Fase08Flow({
   const [salvo, setSalvo] = useState(false);
 
   // Motores de Cálculo
+  const contasAReceber = useMemo(() => {
+    return calcularContasAReceber(pacientesEixo01List, formasPagamentoOverride);
+  }, [pacientesEixo01List, formasPagamentoOverride]);
+
   const dre = useMemo(() => {
     return calcularDreExecutiva(
       despesas,
@@ -76,6 +92,13 @@ export default function Fase08Flow({
   const precificacao = useMemo(() => {
     return calcularPrecificacaoServicos(servicosEixo04, dre.despesasFixasTotaisMensais, 120);
   }, [servicosEixo04, dre.despesasFixasTotaisMensais]);
+
+  function handleFormaPagamentoChange(pacienteId: string, forma: FormaPagamentoPaciente, parcelas: number = 1) {
+    setFormasPagamentoOverride((prev) => ({
+      ...prev,
+      [pacienteId]: { forma, parcelas },
+    }));
+  }
 
   function handleAdicionarDespesa(e: React.FormEvent) {
     e.preventDefault();
@@ -97,6 +120,12 @@ export default function Fase08Flow({
     setDespesas((prev) => prev.filter((d) => d.id !== id));
   }
 
+  function handleEditarDespesaValor(id: string, novoValor: number) {
+    setDespesas((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, valorMensal: Math.max(0, novoValor) } : d))
+    );
+  }
+
   function handleHistoricoMesChange(idx: number, valor: number) {
     setHistorico12MesesState((prev) => {
       const copy = [...(prev.length === 12 ? prev : dre.historico12Meses)];
@@ -113,6 +142,12 @@ export default function Fase08Flow({
         insumoPorConsulta: insumosPorConsultaInput,
         proLaborePessoal: proLaboreInput,
         despesas,
+        formasPagamentoOverride,
+        contasAReceber: {
+          totalM1: contasAReceber.totalRecebimentosGarantidosM1,
+          totalM2: contasAReceber.totalRecebimentosGarantidosM2,
+          totalM3: contasAReceber.totalRecebimentosGarantidosM3,
+        },
         lucroLiquidoMensal: dre.lucroLiquidoMensal,
         margemEbitdaPercentual: dre.margemEbitdaPercentual,
         pontoEquilibrioPacientesAtivos: dre.pontoEquilibrioPacientesAtivos,
@@ -144,19 +179,19 @@ export default function Fase08Flow({
             Eixo 08 · Financeiro, Caixa Real &amp; DRE
           </span>
         </div>
-        <h1 className="text-2xl font-bold text-white">Saúde Financeira, DRE Clássica &amp; Caixa Real</h1>
+        <h1 className="text-2xl font-bold text-white">Saúde Financeira, Contas a Receber &amp; DRE Executiva</h1>
         <p className="text-xs text-slate-400 leading-relaxed">
-          Mapeie as entradas reais do seu caixa, despesas fixas da estrutura, tributação e a DRE Executiva completa do seu consultório.
+          Acompanhe suas entradas de caixa, mapeie o parcelado dos pacientes para os próximos 90 dias e ajuste livremente qualquer dado importado.
         </p>
       </div>
 
-      {/* ── SEÇÃO 1: RECEITA BRUTA COMERCIAL & ENTRADAS REAIS NO CAIXA ── */}
+      {/* ── SEÇÃO 1: RECEITA BRUTA COMERCIAL & CAIXA DEPOSITADO ── */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-xl">
         <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Wallet className="h-5 w-5 text-emerald-400" />
             <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-              1. Receita Bruta Comercial &amp; Entradas Reais no Caixa Depositado
+              1. Receita Bruta Comercial &amp; Entradas Reais no Caixa
             </h2>
           </div>
           <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-bold text-emerald-400 font-mono">
@@ -184,7 +219,175 @@ export default function Fase08Flow({
         </div>
       </div>
 
-      {/* ── SEÇÃO 2: MAPEAMENTO OPCIONAL DE FATURAMENTO DOS ÚLTIMOS 12 MESES ── */}
+      {/* ── SEÇÃO 2: 💳 CONTAS A RECEBER & PREVISIBILIDADE DE CAIXA (90 DIAS) ── */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-xl">
+        <div>
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 mb-1">
+            <CreditCard className="h-3 w-3 text-indigo-400" />
+            <span className="text-[10px] font-bold text-indigo-400 uppercase">Projeção Garantida a 90 Dias</span>
+          </div>
+          <h2 className="text-sm font-bold text-white flex items-center gap-2">
+            2. Contas a Receber &amp; Previsibilidade de Caixa (À Vista vs Parcelado)
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Selecione a forma de pagamento de cada paciente ativo. O sistema projeta exatamente as parcelas que vão cair no seu caixa nos próximos 3 meses.
+          </p>
+        </div>
+
+        {/* Cards dos Próximos 3 Meses */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-center space-y-1">
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">Mês M+1 (Mês Que Vem)</span>
+            <p className="text-lg font-extrabold text-emerald-400 font-mono">
+              R$ {contasAReceber.totalRecebimentosGarantidosM1.toLocaleString('pt-BR')}
+            </p>
+            <span className="text-[10px] text-slate-500 block">Garantidos em parcelas e boletos</span>
+          </div>
+
+          <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-center space-y-1">
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">Mês M+2 (Daqui a 60 dias)</span>
+            <p className="text-lg font-extrabold text-indigo-400 font-mono">
+              R$ {contasAReceber.totalRecebimentosGarantidosM2.toLocaleString('pt-BR')}
+            </p>
+            <span className="text-[10px] text-slate-500 block">Garantidos em parcelas</span>
+          </div>
+
+          <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-center space-y-1">
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">Mês M+3 (Daqui a 90 dias)</span>
+            <p className="text-lg font-extrabold text-amber-400 font-mono">
+              R$ {contasAReceber.totalRecebimentosGarantidosM3.toLocaleString('pt-BR')}
+            </p>
+            <span className="text-[10px] text-slate-500 block">Garantidos em parcelas</span>
+          </div>
+        </div>
+
+        {/* Tabela Nominal por Paciente */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-800 bg-slate-950 text-[10px] uppercase font-bold text-slate-400">
+                <th className="p-3">Paciente (Eixo 01)</th>
+                <th className="p-3">Serviço (Eixo 04)</th>
+                <th className="p-3">Valor Contrato</th>
+                <th className="p-3 text-center">Forma de Pagamento</th>
+                <th className="p-3 text-right">Parcela Mensal</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800 text-xs">
+              {contasAReceber.pacientesContasAReceber.map((p) => (
+                <tr key={p.id} className="hover:bg-slate-800/40 transition-all">
+                  <td className="p-3 font-bold text-white flex items-center gap-2">
+                    <UserCheck className="h-3.5 w-3.5 text-indigo-400" />
+                    {p.nomePaciente}
+                  </td>
+                  <td className="p-3 text-slate-300">{p.servicoContratado}</td>
+                  <td className="p-3 font-mono font-bold text-emerald-400">R$ {p.valorTotalContrato}</td>
+                  <td className="p-3 text-center">
+                    <select
+                      value={p.formaPagamento}
+                      onChange={(e) =>
+                        handleFormaPagamentoChange(
+                          p.id,
+                          e.target.value as FormaPagamentoPaciente,
+                          p.numeroParcelas
+                        )
+                      }
+                      className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-white font-semibold focus:border-indigo-500"
+                    >
+                      <option value="pix_avista">🟢 À vista PIX / Dinheiro</option>
+                      <option value="cartao_parcelado">💳 Cartão Parcelado</option>
+                      <option value="boleto_recorrente">📄 Boleto Recorrente</option>
+                    </select>
+
+                    {p.formaPagamento === 'cartao_parcelado' && (
+                      <select
+                        value={p.numeroParcelas}
+                        onChange={(e) =>
+                          handleFormaPagamentoChange(
+                            p.id,
+                            'cartao_parcelado',
+                            parseInt(e.target.value, 10) || 1
+                          )
+                        }
+                        className="ml-2 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-indigo-300 font-bold"
+                      >
+                        <option value={2}>2x</option>
+                        <option value={3}>3x</option>
+                        <option value={4}>4x</option>
+                        <option value={6}>6x</option>
+                        <option value={12}>12x</option>
+                      </select>
+                    )}
+                  </td>
+                  <td className="p-3 text-right font-mono font-bold text-amber-400">
+                    R$ {p.valorParcelaMensal}/mês
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* ── SEÇÃO 3: ✏️ EDIÇÃO LIVRE DOS DADOS IMPORTADOS DOS EIXOS 01 A 07 ── */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+        <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
+          <div className="flex items-center gap-2">
+            <Edit3 className="h-5 w-5 text-indigo-400" />
+            <div>
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+                3. Edição Livre dos Dados Importados dos Eixos 01 a 07
+              </h2>
+              <p className="text-xs text-slate-400">
+                Ajuste diretamente no Eixo 08 qualquer valor trazido das etapas anteriores sem precisar voltar as telas.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setEditandoImportados(!editandoImportados)}
+            className="px-4 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+          >
+            <Edit3 className="h-3.5 w-3.5" />
+            {editandoImportados ? 'Fechar Edição' : '✏️ Ajustar Valores Importados'}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {despesas
+            .filter((d) => d.origemAutomatico)
+            .map((d) => (
+              <div key={d.id} className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">{d.descricao}</span>
+                  <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    💡 {d.origemAutomatico}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-slate-400">Valor Atual no Financeiro:</span>
+                  {editandoImportados ? (
+                    <input
+                      type="number"
+                      min={0}
+                      value={d.valorMensal}
+                      onChange={(e) => handleEditarDespesaValor(d.id, parseFloat(e.target.value) || 0)}
+                      className="w-32 bg-slate-900 border border-emerald-500 rounded-lg px-2 py-1 text-xs font-bold text-emerald-400 text-right"
+                    />
+                  ) : (
+                    <span className="font-mono text-emerald-400 font-bold text-xs">
+                      R$ {d.valorMensal.toLocaleString('pt-BR')}/mês
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* ── SEÇÃO 4: MAPEAMENTO OPCIONAL DOS ÚLTIMOS 12 MESES ── */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
         <div
           onClick={() => setExibirHistorico12Meses(!exibirHistorico12Meses)}
@@ -194,7 +397,7 @@ export default function Fase08Flow({
             <Calendar className="h-5 w-5 text-indigo-400" />
             <div>
               <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                2. Mapeamento Opcional dos Últimos 12 Meses (Histórico Cronológico)
+                4. Mapeamento Opcional dos Últimos 12 Meses (Histórico Cronológico)
                 <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300">Opcional</span>
               </h2>
               <p className="text-xs text-slate-400">Para quem possui os dados organizados mês a mês por data.</p>
@@ -242,11 +445,11 @@ export default function Fase08Flow({
         )}
       </div>
 
-      {/* ── SEÇÃO 3: IMPOSTOS, TAXAS, INSUMOS POR CONSULTA & PRÓ-LABORE PESSOAL ── */}
+      {/* ── SEÇÃO 5: IMPOSTOS, TAXAS, INSUMOS POR CONSULTA & PRÓ-LABORE PESSOAL ── */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <Receipt className="h-4 w-4 text-emerald-400" />
-          3. Impostos, Taxas, Insumos por Consulta &amp; Pró-Labore Pessoal
+          5. Impostos, Taxas, Insumos por Consulta &amp; Pró-Labore Pessoal
         </h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -284,23 +487,22 @@ export default function Fase08Flow({
         </div>
       </div>
 
-      {/* ── SEÇÃO 4: DESPESAS FIXAS MENSAIS (TABELA CRUD DE ADIÇÃO LIVRE) ── */}
+      {/* ── SEÇÃO 6: DESPESAS FIXAS MENSAIS (TABELA CRUD DE ADIÇÃO LIVRE) ── */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <Layers className="h-4 w-4 text-emerald-400" />
-          4. Despesas Fixas Mensais da Estrutura (Adição Livre de Linhas)
+          6. Gestão &amp; Edição de Despesas Fixas Operacionais
         </h2>
 
-        {/* Form para Nova Linha Livre */}
         <form onSubmit={handleAdicionarDespesa} className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Descrição do Custo Fixo:</label>
+              <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Descrição do Custo:</label>
               <input
                 type="text"
                 value={descricaoNova}
                 onChange={(e) => setDescricaoNova(e.target.value)}
-                placeholder="Ex: Aluguel do Consultório"
+                placeholder="Ex: Aluguel de Sala"
                 className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:border-emerald-500"
               />
             </div>
@@ -338,12 +540,11 @@ export default function Fase08Flow({
               type="submit"
               className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs px-4 py-2 rounded-xl transition-all shadow cursor-pointer flex items-center gap-1.5"
             >
-              <Plus className="h-3.5 w-3.5" /> Adicionar Linha de Custo Fixo
+              <Plus className="h-3.5 w-3.5" /> Adicionar Custo Fixos
             </button>
           </div>
         </form>
 
-        {/* Tabela de Custos Fixos */}
         <div className="space-y-2">
           {despesas.map((d) => (
             <div key={d.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
@@ -373,11 +574,11 @@ export default function Fase08Flow({
         </div>
       </div>
 
-      {/* ── SEÇÃO 5: 📋 DRE CLÁSSICA EXECUTIVA DO CONSULTÓRIO A3 ── */}
+      {/* ── SEÇÃO 7: 📋 DRE CLÁSSICA EXECUTIVA DO CONSULTÓRIO A3 & PRECIFICAÇÃO ── */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
         <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <DollarSign className="h-5 w-5 text-emerald-400" />
-          5. 📋 DRE Clássica Executiva do Consultório A3
+          7. 📋 DRE Clássica Executiva do Consultório A3 &amp; Precificação
         </h2>
         <p className="text-xs text-slate-400">
           Demonstrativo financeiro clássico completo, alinhado aos padrões executivos de consultório.
@@ -428,69 +629,6 @@ export default function Fase08Flow({
             <span className="text-emerald-300">(=) SOBRA LÍQUIDA REAL DO CAIXA (LUCRO RETIDO):</span>
             <span className="font-mono text-emerald-300 text-base">R$ {dre.lucroLiquidoMensal.toLocaleString('pt-BR')} / mês</span>
           </div>
-        </div>
-      </div>
-
-      {/* ── SEÇÃO 6: ANÁLISE COMPLETA DE PRECIFICAÇÃO & MARGEM REAL POR SERVIÇO ── */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-        <div>
-          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 mb-1">
-            <Tag className="h-3 w-3 text-indigo-400" />
-            <span className="text-[10px] font-bold text-indigo-400 uppercase">Unit Economics · Raio-X de Precificação</span>
-          </div>
-          <h2 className="text-sm font-bold text-white flex items-center gap-2">
-            6. Análise de Precificação &amp; Margem Real por Serviço
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Cruza o preço de tabela do Eixo 04 com o tempo técnico do Eixo 06 e custos fixos para identificar se cada produto gera <strong>Lucro Real</strong> ou <strong>Prejuízo Oculto</strong>.
-          </p>
-        </div>
-
-        <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between flex-wrap gap-2 text-xs">
-          <span className="text-slate-300 font-semibold">Custo da Hora Clínica do Seu Consultório:</span>
-          <span className="font-mono font-bold text-indigo-400">
-            R$ {precificacao.custoHoraClinicaConsultorio.toLocaleString('pt-BR')} / hora técnica
-          </span>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="border-b border-slate-800 bg-slate-950 text-[10px] uppercase font-bold text-slate-400">
-                <th className="p-3">Serviço Cadastrado (Eixo 04)</th>
-                <th className="p-3">Preço de Tabela</th>
-                <th className="p-3 text-center">Tempo Total (Horas)</th>
-                <th className="p-3 text-center">Custo Direto Total</th>
-                <th className="p-3 text-right">Lucro Real / Margem</th>
-                <th className="p-3 text-right">Piso Recomendado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-800 text-xs font-medium">
-              {precificacao.serviciosDetalhados.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-800/40 transition-all">
-                  <td className="p-3 font-bold text-white">
-                    {item.nomeServico}
-                    {item.statusMargem === 'prejuizo_oculto' && (
-                      <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-300 border border-red-500/30">
-                        ⚠️ Prejuízo Oculto
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-3 text-emerald-400 font-mono font-bold">R$ {item.precoTabela}</td>
-                  <td className="p-3 text-center text-slate-300">{item.horasDedicadasTotal}h</td>
-                  <td className="p-3 text-center text-red-400 font-mono">R$ {item.custoDiretoTotal}</td>
-                  <td className="p-3 text-right font-mono font-bold">
-                    <span className={item.lucroLiquidoReal < 0 ? 'text-red-400' : 'text-emerald-400'}>
-                      R$ {item.lucroLiquidoReal} ({item.margemLucroPercentual}%)
-                    </span>
-                  </td>
-                  <td className="p-3 text-right text-indigo-300 font-mono font-bold">
-                    R$ {item.pisoMinimoRecomendado}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
 
