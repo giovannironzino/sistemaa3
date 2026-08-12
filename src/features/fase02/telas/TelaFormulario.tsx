@@ -30,6 +30,7 @@ interface FormState {
   sabeQualParceiro: boolean | null;
   nomeParceiro: string;
   vinculadoEixo01: boolean;
+  recusouVinculo: boolean;
 }
 
 function buildInitialForm(contato?: ContatoCaptacao): FormState {
@@ -44,6 +45,7 @@ function buildInitialForm(contato?: ContatoCaptacao): FormState {
       sabeQualParceiro: null,
       nomeParceiro: '',
       vinculadoEixo01: false,
+      recusouVinculo: false,
     };
   }
   return {
@@ -56,6 +58,7 @@ function buildInitialForm(contato?: ContatoCaptacao): FormState {
     sabeQualParceiro: contato.sabeQualParceiro ?? null,
     nomeParceiro: contato.nomeParceiro ?? '',
     vinculadoEixo01: false,
+    recusouVinculo: false,
   };
 }
 
@@ -192,24 +195,39 @@ export default function TelaFormulario({
         />
 
         {/* Chip de Vínculo Guiado pelo Usuário com o Eixo 01 */}
-        {pacienteCorrespondenteEixo01 && !form.vinculadoEixo01 && (
-          <div style={{ marginTop: 10, padding: 12, borderRadius: 10, background: 'rgba(109,94,248,.12)', border: '1px solid rgba(109,94,248,.3)', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ fontSize: 12, color: '#e2e8f0' }}>
-              💡 <strong>Match Encontrado:</strong> Esta pessoa corresponde ao paciente <strong>{pacienteCorrespondenteEixo01.nome}</strong> já mapeado no Eixo 01?
+        {pacienteCorrespondenteEixo01 && !form.vinculadoEixo01 && !form.recusouVinculo && (
+          <div style={{ marginTop: 10, padding: 14, borderRadius: 12, background: 'rgba(109,94,248,.12)', border: '1px solid rgba(109,94,248,.3)', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ fontSize: 12, color: '#e2e8f0', lineHeight: 1.5 }}>
+              💡 <strong>Match Encontrado:</strong> Esta pessoa que te chamou no WhatsApp é o paciente <strong>{pacienteCorrespondenteEixo01.nome}</strong> já mapeado por você no Eixo 01?
             </div>
-            <button
-              type="button"
-              onClick={handleConfirmarVinculo}
-              style={{ background: '#6d5ef8', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
-            >
-              Vincular Dados ✓
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={handleConfirmarVinculo}
+                style={{ background: '#6d5ef8', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Sim, é a mesma pessoa (Vincular Dados) ✓
+              </button>
+              <button
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, recusouVinculo: true }))}
+                style={{ background: 'rgba(255,255,255,.08)', color: '#cbd5e1', border: '1px solid rgba(255,255,255,.15)', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              >
+                Não, é outra pessoa com nome parecido
+              </button>
+            </div>
           </div>
         )}
 
         {form.vinculadoEixo01 && (
           <div style={{ marginTop: 8, fontSize: 11, color: '#34d399', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-            ✓ Dados de objetivo vinculados automaticamente ao Eixo 01!
+            ✓ Dados de objetivo vinculados automaticamente ao paciente do Eixo 01!
+          </div>
+        )}
+
+        {form.recusouVinculo && (
+          <div style={{ marginTop: 8, fontSize: 11, color: '#94a3b8', background: 'rgba(255,255,255,.04)', padding: '8px 12px', borderRadius: 8, border: '1px solid rgba(255,255,255,.08)' }}>
+            ℹ️ Entendido! Trata-se de uma pessoa diferente. Criaremos um novo registro de contato em separado, sem alterar os dados do paciente do Eixo 01.
           </div>
         )}
       </div>

@@ -276,29 +276,6 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
                     <div className="h-px w-4 shrink-0 mx-0.5 bg-white/10" aria-hidden="true" />
                   )}
                 </div>
-
-                {etapa.id === 'fase02_captacao' && (
-                  <div className="flex items-center shrink-0">
-                    <button
-                      type="button"
-                      id="etapa_crm_bridge"
-                      onClick={handleClickCrmBridge}
-                      title="CRM — Ponte Captação → Vendas"
-                      className={[
-                        'flex flex-col items-center gap-1 px-1.5 py-1.5 rounded-lg transition-all min-w-[40px] cursor-pointer',
-                        mostrarCrmBridge
-                          ? 'bg-indigo-600/25 border-2 border-indigo-500'
-                          : 'bg-indigo-500/10 border border-indigo-500/40 hover:bg-indigo-500/15',
-                      ].join(' ')}
-                    >
-                      <div className="h-4 w-4 rounded-[5px] flex items-center justify-center bg-indigo-500/20 text-indigo-300">
-                        <span className="text-[7px] font-black">⇄</span>
-                      </div>
-                      <span className="text-[8px] font-bold text-indigo-300">CRM</span>
-                    </button>
-                    <div className="h-px w-3 shrink-0 mx-0.5 bg-white/10" aria-hidden="true" />
-                  </div>
-                )}
               </React.Fragment>
             );
           })}
@@ -316,17 +293,6 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
               setFaseFocada(faseId);
             }}
           />
-        ) : mostrarCrmBridge ? (
-          <CrmBridgeFlow
-            uid={uid}
-            initialState={clientRecord?.crmBridge ?? null}
-            contatosFase02={clientRecord?.fase02?.contatos ?? []}
-            onSalvarContatoFaltante={(contato) => salvarContatoFaltanteNoFase02(uid, contato)}
-            onVoltarCaptacao={() => {
-              setMostrarCrmBridge(false);
-              setFaseFocada('fase02_captacao');
-            }}
-          />
         ) : faseFocada === 'fase01_promessa_metodo' ? (
           <Fase01Flow uid={uid} initialState={clientRecord?.fase01 ?? null} />
         ) : faseFocada === 'fase02_captacao' ? (
@@ -334,7 +300,7 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
             key="fase02"
             uid={uid}
             initialState={clientRecord?.fase02 ?? null}
-            onAvancarCrm={() => setMostrarCrmBridge(true)}
+            onAvancarCrm={() => setFaseFocada('fase03_vendas')}
           />
         ) : faseFocada === 'fase03_vendas' ? (
           <Fase03Flow

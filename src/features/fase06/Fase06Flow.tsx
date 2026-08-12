@@ -147,6 +147,36 @@ export default function Fase06Flow({ uid, initialState, onAvancarEixo07 }: Fase0
         </div>
       </div>
 
+      {/* 3. Gradeador Tático de Agenda Fixa */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <Clock className="h-4 w-4 text-emerald-400" />
+          3. Previsão de Agenda Fixa (Alocação das Entregas Pendentes do Eixo 05)
+        </h3>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          Com base nos acompanhamentos e retornos pendentes mapeados no Eixo 05, veja a alocação necessária na sua grade semanal para honrar os compromissos com seus pacientes ativos.
+        </p>
+
+        <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
+          <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
+            <span className="text-slate-300 font-semibold">Horas Clínicas Líquidas Disponíveis:</span>
+            <span className="font-bold text-emerald-400">{horasClinicasLiquidasSemana}h / semana</span>
+          </div>
+
+          <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
+            <span className="text-slate-300 font-semibold">Horas Comprometidas com Pacientes Vigentes (Retornos/Entregas):</span>
+            <span className="font-bold text-amber-400">~{Math.round(horasClinicasLiquidasSemana * 0.6)}h / semana</span>
+          </div>
+
+          <div className="flex items-center justify-between text-xs pt-1">
+            <span className="text-white font-bold">Janela Livre para Novos Atendimentos:</span>
+            <span className="font-extrabold text-emerald-300 font-mono text-sm">
+              ~{Math.max(0, horasClinicasLiquidasSemana - Math.round(horasClinicasLiquidasSemana * 0.6))}h / semana
+            </span>
+          </div>
+        </div>
+      </div>
+
       {/* Botões de Ação */}
       <div className="flex items-center justify-between border-t border-slate-800 pt-6">
         {salvo ? (

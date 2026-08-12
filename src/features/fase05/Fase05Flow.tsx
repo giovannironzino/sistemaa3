@@ -139,6 +139,41 @@ export default function Fase05Flow({ uid, initialState, onAvancarEixo06 }: Fase0
         </div>
       </div>
 
+      {/* 4. Quadro de Status de Entregáveis por Paciente */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4">
+        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+          <PackageCheck className="h-4 w-4 text-emerald-400" />
+          4. Quadro de Status das Entregas (O que já foi entregue vs O que ainda falta)
+        </h3>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          Mapeie o progresso das entregas dos seus pacientes ativos para descobrir o seu passivo operacional pendente e calcular a sua demanda real de agenda no Eixo 06.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+            <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+              🟢 O que JÁ foi entregue aos pacientes ativos:
+            </span>
+            <ul className="text-xs text-slate-300 space-y-1.5">
+              <li className="flex items-center gap-2">✓ Consulta Inicial de Anamnese &amp; Alinhamento</li>
+              <li className="flex items-center gap-2">✓ Elaboração e Envio do Plano Alimentar</li>
+              <li className="flex items-center gap-2">✓ Avaliação de Exames Laboratoriais</li>
+            </ul>
+          </div>
+
+          <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+            <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+              ⏳ O que AINDA FALTA entregar no acompanhamento:
+            </span>
+            <ul className="text-xs text-slate-300 space-y-1.5">
+              <li className="flex items-center gap-2">⏳ 2º Retorno de Acompanhamento Presencial / Online</li>
+              <li className="flex items-center gap-2">⏳ Bioimpedância de Controle de 30 Dias</li>
+              <li className="flex items-center gap-2">⏳ Checagem Intermediária de Ajustes no WhatsApp</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* Botões de Ação */}
       <div className="flex items-center justify-between border-t border-slate-800 pt-6">
         {salvo ? (

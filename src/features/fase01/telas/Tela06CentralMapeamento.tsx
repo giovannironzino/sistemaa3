@@ -1,24 +1,60 @@
 // Tela06CentralMapeamento.tsx
-// Tela de Mapeamento Vivo de Pacientes — Master-Detail com Espelho da Promessa Reativo em Tempo Real.
+// Tela de Mapeamento Vivo de Pacientes — Master-Detail com Passo 0 (Software CRM),
+// 3 Blocos Colapsáveis Mensais e Espelho da Promessa Reativo em Tempo Real.
 
 import React, { useState, useMemo } from 'react';
-import { UserPlus, Trash2, Edit3, ArrowRight, CheckCircle2, UserCheck, DollarSign, Calendar } from 'lucide-react';
+import { UserPlus, Trash2, Edit3, ArrowRight, CheckCircle2, UserCheck, DollarSign, Calendar, ChevronDown, ChevronUp, Sparkles, Building2, Laptop } from 'lucide-react';
 import { PacienteMapeadoEixo01, ClusterId, FATORES_PRIORITARIOS_POR_DOR } from '../fase01.types';
 import EspelhoPromessaReativo from '../components/EspelhoPromessaReativo';
 import { obterDatasA3 } from '../../../lib/dateUtils';
 
+const OPCOES_SOFTWARE_CRM = [
+  'WebDiet',
+  'Welts',
+  'Nutritrack',
+  'PersonalDiet',
+  'WebNutri',
+  'Planilhas Excel / Google',
+  'Outro Software / Anotações em Papel',
+];
+
 interface Tela06CentralMapeamentoProps {
   pacientesIniciais: PacienteMapeadoEixo01[];
-  onAvancar: (pacientes: PacienteMapeadoEixo01[]) => void;
+  nomeConsultorioInicial?: string;
+  softwareCrmInicial?: string;
+  totalPacientesAtivosInicial?: number;
+  onAvancar: (pacientes: PacienteMapeadoEixo01[], extra?: { nomeConsultorio?: string; softwareCrmUtilizado?: string; totalPacientesAtivosVigentes?: number }) => void;
 }
+
+type MesKey = 'mesM2' | 'mesM1' | 'mesM0';
 
 export default function Tela06CentralMapeamento({
   pacientesIniciais,
+  nomeConsultorioInicial = '',
+  softwareCrmInicial = 'WebDiet',
+  totalPacientesAtivosInicial,
   onAvancar,
 }: Tela06CentralMapeamentoProps) {
   const datas = useMemo(() => obterDatasA3(null), []);
   const [pacientes, setPacientes] = useState<PacienteMapeadoEixo01[]>(pacientesIniciais);
   const [pacienteEmEdicaoId, setPacienteEmEdicaoId] = useState<string | null>(null);
+
+  // Passo 0 State
+  const [nomeConsultorio, setNomeConsultorio] = useState(nomeConsultorioInicial);
+  const [softwareCrm, setSoftwareCrm] = useState(softwareCrmInicial);
+  const [totalAtivosCustom, setTotalAtivosCustom] = useState<number | ''>(
+    totalPacientesAtivosInicial ?? (pacientesIniciais.length > 0 ? pacientesIniciais.length : 30)
+  );
+
+  // Mês ativo no formulário
+  const [mesForm, setMesForm] = useState<MesKey>('mesM0');
+
+  // Estado dos blocos colapsáveis por mês
+  const [openMeses, setOpenMeses] = useState<Record<MesKey, boolean>>({
+    mesM0: true,
+    mesM1: true,
+    mesM2: true,
+  });
 
   // Form State
   const [nome, setNome] = useState('');
@@ -28,6 +64,26 @@ export default function Tela06CentralMapeamento({
   const [ticketPagoEstimado, setTicketPagoEstimado] = useState<string>('');
 
   const opcoesFatores = FATORES_PRIORITARIOS_POR_DOR[dorId]?.opcoes ?? [];
+
+  const mesesInfo: { key: MesKey; label: string }[] = [
+    { key: 'mesM2', label: datas.mesM2 },
+    { key: 'mesM1', label: datas.mesM1 },
+    { key: 'mesM0', label: datas.mesM0 },
+  ];
+
+  function toggleMes(key: MesKey) {
+    setOpenMeses((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function handleStartAddNoMes(key: MesKey) {
+    setMesForm(key);
+    setPacienteEmEdicaoId(null);
+    setNome('');
+    setPilarForte('');
+    setElementoDiferencial('');
+    setTicketPagoEstimado('');
+    setOpenMeses((prev) => ({ ...prev, [key]: true }));
+  }
 
   function handleSalvarPaciente(e: React.FormEvent) {
     e.preventDefault();
@@ -46,6 +102,7 @@ export default function Tela06CentralMapeamento({
                 pilarForte: pilarForte || opcoesFatores[0],
                 elementoDiferencial: elementoDiferencial || (opcoesFatores[1] ?? opcoesFatores[0]),
                 ticketPagoEstimado: valTicket,
+                mesAtendimento: mesForm,
               }
             : p
         )
@@ -59,6 +116,7 @@ export default function Tela06CentralMapeamento({
         pilarForte: pilarForte || opcoesFatores[0],
         elementoDiferencial: elementoDiferencial || (opcoesFatores[1] ?? opcoesFatores[0]),
         ticketPagoEstimado: valTicket,
+        mesAtendimento: mesForm,
         createdAt: new Date().toISOString(),
       };
       setPacientes((prev) => [...prev, novoPaciente]);
@@ -78,6 +136,7 @@ export default function Tela06CentralMapeamento({
     setPilarForte(p.pilarForte);
     setElementoDiferencial(p.elementoDiferencial);
     setTicketPagoEstimado(p.ticketPagoEstimado ? String(p.ticketPagoEstimado) : '');
+    setMesForm(p.mesAtendimento || 'mesM0');
   }
 
   function handleRemoverPaciente(id: string) {
@@ -99,29 +158,104 @@ export default function Tela06CentralMapeamento({
     setTicketPagoEstimado('');
   }
 
+  const totalAtivosCalculado = Number(totalAtivosCustom) || Math.max(pacientes.length, 1);
+
   return (
     <div className="w-full max-w-6xl mx-auto space-y-8" id="tela_central_mapeamento">
-      {/* Header */}
+      {/* ── PASSO 0: Meu Cadastro & Setup do Software de Prontuário ── */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 rounded-2xl p-6 space-y-5 shadow-2xl">
+        <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+          <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
+            <Building2 className="h-5 w-5" />
+          </div>
+          <div>
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400">
+              Passo 0 · Setup Inicial da Clínica &amp; Software
+            </span>
+            <h2 className="text-lg font-bold text-white leading-tight">
+              Qual software você usa para organizar seus pacientes?
+            </h2>
+          </div>
+        </div>
+
+        {/* Banner Orientador em Linguagem Simples */}
+        <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex items-start gap-3 text-xs leading-relaxed">
+          <Sparkles className="h-4 w-4 text-emerald-400 mt-0.5 flex-none" />
+          <div className="text-slate-300">
+            <strong className="text-white font-semibold">Dica A3 para facilitar o seu trabalho:</strong> Abra o seu software de prontuário (ex: <strong className="text-emerald-400">{softwareCrm}</strong>) ao lado na tela, na aba de relatórios de atendimentos de <strong className="text-white">{datas.intervaloTrimestreRecente}</strong>. Ter essa lista aberta vai facilitar o preenchimento sem precisar adivinhar nada!
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex items-center gap-1.5">
+              <Building2 className="h-3.5 w-3.5 text-indigo-400" />
+              Nome da Clínica / Consultório:
+            </label>
+            <input
+              type="text"
+              placeholder="Ex: Consultório Nutrição Viva"
+              value={nomeConsultorio}
+              onChange={(e) => setNomeConsultorio(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-white focus:border-indigo-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex items-center gap-1.5">
+              <Laptop className="h-3.5 w-3.5 text-indigo-400" />
+              Software de Prontuário / CRM:
+            </label>
+            <select
+              value={softwareCrm}
+              onChange={(e) => setSoftwareCrm(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-indigo-300 font-semibold focus:border-indigo-500 focus:outline-none"
+            >
+              {OPCOES_SOFTWARE_CRM.map((sw) => (
+                <option key={sw} value={sw}>{sw}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-300 block mb-1.5 flex items-center gap-1.5">
+              <UserCheck className="h-3.5 w-3.5 text-emerald-400" />
+              Total de Pacientes Ativos Hoje:
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={totalAtivosCustom}
+              onChange={(e) => setTotalAtivosCustom(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+              placeholder="Ex: 45"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs text-emerald-400 font-bold font-mono focus:border-emerald-500 focus:outline-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Header Central de Mapeamento */}
       <div className="space-y-2">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
           <Calendar className="h-3.5 w-3.5 text-emerald-400" />
           <span className="text-[10px] font-bold tracking-widest text-emerald-400 uppercase">
-            Eixo 01 · Fase 01 · Mapeamento Vivo de Pacientes ({datas.intervaloTrimestreRecente})
+            Eixo 01 · Promessa &amp; Atendimentos ({datas.intervaloTrimestreRecente})
           </span>
         </div>
         <h1 className="text-2xl font-bold text-white leading-snug">
-          Central de Mapeamento dos Atendimentos ({datas.intervaloTrimestreRecente})
+          Mapeamento Vivo dos Pacientes por Mês
         </h1>
         <p className="text-sm text-slate-400 max-w-3xl leading-relaxed">
-          Cadastre ou revise os pacientes atendidos entre <strong className="text-emerald-400 font-semibold">{datas.intervaloTrimestreRecente}</strong>. Selecione a principal dor, os fatores de atendimento e o ticket médio (opcional) para ver a sua <strong>Promessa Única</strong> se consolidar ao vivo em Linguagem Simples.
+          Cadastre ou revise os pacientes atendidos em cada um dos últimos 3 meses.
+          O total de <strong className="text-emerald-400">{totalAtivosCalculado} pacientes ativos</strong> vigentes no seu consultório será preservado para todos os eixos seguintes.
         </p>
       </div>
 
-      {/* Grid Principal: Master-Detail + Live Preview */}
+      {/* Grid Principal: Formulário + 3 Blocos Mensais + Live Preview */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Coluna Esquerda / Central (Ação & Formulário) */}
+        {/* Coluna Esquerda / Central (Formulário e 3 Blocos Mensais) */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Card de Formulário (Chips) */}
+          {/* Card de Formulário com Seleção de Mês */}
           <form
             onSubmit={handleSalvarPaciente}
             className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-xl"
@@ -129,7 +263,7 @@ export default function Tela06CentralMapeamento({
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <UserPlus className="h-4 w-4 text-emerald-400" />
-                {pacienteEmEdicaoId ? 'Editar Paciente' : 'Adicionar Novo Paciente'}
+                {pacienteEmEdicaoId ? 'Editar Paciente' : 'Cadastrar Paciente Mapeado'}
               </h3>
               {pacienteEmEdicaoId && (
                 <button
@@ -142,7 +276,30 @@ export default function Tela06CentralMapeamento({
               )}
             </div>
 
-            {/* Campos Nome + Ticket (Lado a Lado) */}
+            {/* Chips de Seleção do Mês de Atendimento */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-slate-300 block">
+                Selecione o Mês do Atendimento:
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {mesesInfo.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setMesForm(key)}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition-all border cursor-pointer text-center ${
+                      mesForm === key
+                        ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md'
+                        : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Campos Nome + Ticket */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="sm:col-span-2 space-y-1.5">
                 <label className="text-xs font-semibold text-slate-300">Nome do Paciente:</label>
@@ -266,63 +423,106 @@ export default function Tela06CentralMapeamento({
             </div>
           </form>
 
-          {/* Lista de Pacientes Mapeados */}
-          <div className="space-y-3">
+          {/* ── 3 BLOCOS COLAPSÁVEIS MENSAIS ── */}
+          <div className="space-y-4">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
               <UserCheck className="h-4 w-4 text-emerald-400" />
-              Pacientes Cadastrados ({pacientes.length})
+              Pacientes Mapeados por Mês ({pacientes.length} cadastrados no período)
             </h3>
 
-            {pacientes.length === 0 ? (
-              <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800 text-center text-sm text-slate-400">
-                Nenhum paciente cadastrado ainda. Preencha o formulário acima para adicionar o primeiro.
-              </div>
-            ) : (
-              <div className="space-y-2.5 max-h-[400px] overflow-y-auto pr-1">
-                {pacientes.map((p) => {
-                  const dorRotulo = FATORES_PRIORITARIOS_POR_DOR[p.dorId]?.rotulo ?? p.dorId;
-                  return (
-                    <div
-                      key={p.id}
-                      className="bg-slate-900/70 border border-slate-800 hover:border-slate-700 rounded-xl p-4 flex items-center justify-between gap-4 transition-all"
-                    >
-                      <div className="space-y-1">
-                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                          🟢 {p.nome}
-                          {p.ticketPagoEstimado && (
-                            <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                              R$ {p.ticketPagoEstimado}
-                            </span>
-                          )}
-                        </h4>
-                        <p className="text-xs text-slate-400">
-                          {dorRotulo.split('/')[0]} · <span className="text-emerald-400 font-medium">{p.pilarForte}</span>
-                        </p>
-                      </div>
+            {mesesInfo.map(({ key, label }) => {
+              const pacientesDoMes = pacientes.filter(
+                (p) => (p.mesAtendimento || 'mesM0') === key
+              );
+              const isOpen = openMeses[key];
+              const ticketMedioMes = pacientesDoMes.length > 0
+                ? Math.round(pacientesDoMes.reduce((acc, p) => acc + (p.ticketPagoEstimado || 0), 0) / pacientesDoMes.length)
+                : 0;
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleEditarPaciente(p)}
-                          className="p-2 text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                          title="Editar paciente"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoverPaciente(p.id)}
-                          className="p-2 text-slate-400 hover:text-red-400 bg-slate-800/60 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-                          title="Remover paciente"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+              return (
+                <div key={key} className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                  {/* Cabeçalho do Bloco Mensal */}
+                  <div className="p-4 bg-slate-950 border-b border-slate-800/80 flex items-center justify-between flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleMes(key)}
+                      className="flex items-center gap-3 text-left cursor-pointer"
+                    >
+                      {isOpen ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                      <div>
+                        <span className="text-xs font-extrabold text-emerald-400 uppercase tracking-wider">{label}</span>
+                        <span className="text-[11px] text-slate-400 ml-3">
+                          <strong className="text-white">{pacientesDoMes.length}</strong> paciente(s)
+                          {ticketMedioMes > 0 && <span className="text-emerald-300 font-semibold ml-2">· Ticket Médio: R$ {ticketMedioMes}</span>}
+                        </span>
                       </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleStartAddNoMes(key)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all cursor-pointer"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" /> + Adicionar neste mês
+                    </button>
+                  </div>
+
+                  {/* Conteúdo do Bloco (Lista de Pacientes) */}
+                  {isOpen && (
+                    <div className="p-4 space-y-2.5">
+                      {pacientesDoMes.length === 0 ? (
+                        <p className="text-xs text-slate-500 italic text-center py-3">
+                          Nenhum paciente cadastrado em {label}. Use o botão acima para adicionar.
+                        </p>
+                      ) : (
+                        pacientesDoMes.map((p) => {
+                          const dorRotulo = FATORES_PRIORITARIOS_POR_DOR[p.dorId]?.rotulo ?? p.dorId;
+                          return (
+                            <div
+                              key={p.id}
+                              className="bg-slate-950/70 border border-slate-800 hover:border-slate-700 rounded-xl p-3.5 flex items-center justify-between gap-4 transition-all"
+                            >
+                              <div className="space-y-1">
+                                <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                                  🟢 {p.nome}
+                                  {p.ticketPagoEstimado && (
+                                    <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                                      R$ {p.ticketPagoEstimado}
+                                    </span>
+                                  )}
+                                </h4>
+                                <p className="text-[11px] text-slate-400">
+                                  {dorRotulo.split('/')[0]} · <span className="text-emerald-400 font-medium">{p.pilarForte}</span>
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditarPaciente(p)}
+                                  className="p-1.5 text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                                  title="Editar paciente"
+                                >
+                                  <Edit3 className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoverPaciente(p.id)}
+                                  className="p-1.5 text-slate-400 hover:text-red-400 bg-slate-800/60 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                                  title="Remover paciente"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -336,7 +536,7 @@ export default function Tela06CentralMapeamento({
       <div className="flex justify-end border-t border-slate-800 pt-6">
         <button
           type="button"
-          onClick={() => onAvancar(pacientes)}
+          onClick={() => onAvancar(pacientes, { nomeConsultorio, softwareCrmUtilizado: softwareCrm, totalPacientesAtivosVigentes: totalAtivosCalculado })}
           disabled={pacientes.length === 0}
           className={`flex items-center gap-2 px-8 py-3.5 text-sm font-bold rounded-xl transition-all ${
             pacientes.length > 0

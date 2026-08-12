@@ -26,10 +26,14 @@ export interface PacienteMapeadoEixo01 {
   pilarForte: string; // Fator Prioritário 🥇 (Lógica interna: 80%)
   elementoDiferencial: string; // Fator Decisivo 🥈 (Lógica interna: 20%)
   ticketPagoEstimado?: number; // Valor pago ou ticket estimado
+  mesAtendimento?: 'mesM2' | 'mesM1' | 'mesM0'; // mês de atendimento nos últimos 90 dias
   createdAt?: string;
 }
 
 export interface Fase01State {
+  nomeConsultorio?: string;
+  softwareCrmUtilizado?: string;
+  totalPacientesAtivosVigentes?: number; // Total real de pacientes ativos no consultório
   volumes: VolumePorCluster[];           // 6 itens (um por cluster)
   clustersQualificados: ClusterId[];     // subconjunto com quantidadePessoas >= 1
   promessas: PromessaPorCluster[];       

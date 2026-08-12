@@ -94,7 +94,10 @@ export default function Fase01Flow({ uid, initialState }: Fase01FlowProps) {
   );
 
   // Handlers
-  function handleMapeamentoAvancar(pacientes: PacienteMapeadoEixo01[]) {
+  function handleMapeamentoAvancar(
+    pacientes: PacienteMapeadoEixo01[],
+    extra?: { nomeConsultorio?: string; softwareCrmUtilizado?: string; totalPacientesAtivosVigentes?: number }
+  ) {
     // Apuração dos volumes por cluster e dor mais frequente
     const contagem: Record<string, number> = {};
     pacientes.forEach((p) => {
@@ -118,6 +121,9 @@ export default function Fase01Flow({ uid, initialState }: Fase01FlowProps) {
       volumes,
       clustersQualificados: qualificados,
       publicoAlvoFinal,
+      nomeConsultorio: extra?.nomeConsultorio ?? prev.nomeConsultorio,
+      softwareCrmUtilizado: extra?.softwareCrmUtilizado ?? prev.softwareCrmUtilizado,
+      totalPacientesAtivosVigentes: extra?.totalPacientesAtivosVigentes ?? prev.totalPacientesAtivosVigentes,
     }));
 
     goToStep({ screen: 'tela5' });
@@ -155,6 +161,9 @@ export default function Fase01Flow({ uid, initialState }: Fase01FlowProps) {
       {step.screen === 'tela_mapeamento' && (
         <Tela06CentralMapeamento
           pacientesIniciais={state.pacientesMapeados ?? []}
+          nomeConsultorioInicial={state.nomeConsultorio}
+          softwareCrmInicial={state.softwareCrmUtilizado}
+          totalPacientesAtivosInicial={state.totalPacientesAtivosVigentes}
           onAvancar={handleMapeamentoAvancar}
         />
       )}
