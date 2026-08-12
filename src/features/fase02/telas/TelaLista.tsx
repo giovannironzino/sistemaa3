@@ -1,13 +1,13 @@
 // TelaLista.tsx
-// Painel Principal do Eixo 02 — Captação (Seleção de Canais Ativos + 3 Boxes Mensais em Colunas).
-// Veredito é exibido em TELA EXCLUSIVA após clicar em "Concluir e Gerar Veredito".
+// Painel Principal do Eixo 02 — Captação em TELA ÚNICA FLÚIDA.
+// Reúne "Quais canais você usa para atrair pacientes?" e "Entrada de Leads" na MESMA tela.
+// Exibe APENAS os canais selecionados pelo usuário em tempo real.
 
 import React, { useState, useMemo } from 'react';
 import { Plus, Sparkles, TrendingUp, Calendar, Pencil, Trash2, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { ContatoCaptacao, CanalOrigemId } from '../fase02.types';
 import { CANAIS_ORIGEM, getLabelCanalById } from '../data/canaisOrigem';
 import { getLabelById as getLabelClusterById } from '../../fase01/data/bancoDePromessas';
-import { C } from '../ui/tokens';
 import { obterDatasA3 } from '../../../lib/dateUtils';
 
 interface TelaListaProps {
@@ -50,18 +50,23 @@ export default function TelaLista({
 }: TelaListaProps) {
   const datas = useMemo(() => obterDatasA3(null), []);
 
-  // PASSO 1 — Selecionar quais canais o usuário utiliza
+  // 1. Canais selecionados pelo usuário (padrão: todos ou os que contêm contatos)
   const [canaisSelecionados, setCanaisSelecionados] = useState<Set<CanalOrigemId>>(() => {
     const usados = new Set<CanalOrigemId>(allContacts.map((c) => c.canalOrigem));
-    return usados.size > 0 ? usados : new Set<CanalOrigemId>();
+    return usados.size > 0 ? usados : new Set<CanalOrigemId>(['instagram_organico', 'indicacao_boca_a_boca']);
   });
-  const [passoAtual, setPassoAtual] = useState<'selecionarCanais' | 'preencherDados'>(
-    allContacts.length > 0 ? 'preencherDados' : 'selecionarCanais'
-  );
+
   const [semHistorico, setSemHistorico] = useState(false);
   const [modoPreenchimento, setModoPreenchimento] = useState<'volume' | 'nominal'>('volume');
 
-  // Volumes por canal por mês (mesM2, mesM1, mesM0)
+  // Estado dos blocos mensais no modo nominal
+  const [openMeses, setOpenMeses] = useState<Record<string, boolean>>({
+    [datas.mesM0]: true,
+    [datas.mesM1]: true,
+    [datas.mesM2]: true,
+  });
+
+  // Volumes por canal por mês (mes2: Maio, mes1: Junho, mes0: Julho)
   const [volumesMensais, setVolumesMensais] = useState<Record<CanalOrigemId, Record<MesKey, VolumeMensal>>>(() => {
     const init: Record<string, Record<MesKey, VolumeMensal>> = {};
     CANAIS_ORIGEM.forEach((c) => {
@@ -74,6 +79,7 @@ export default function TelaLista({
     return init as Record<CanalOrigemId, Record<MesKey, VolumeMensal>>;
   });
 
+  // Canais ativos selecionados pelo usuário
   const canaisAtivos = CANAIS_ORIGEM.filter((c) => canaisSelecionados.has(c.id));
 
   const meses: { key: MesKey; label: string }[] = [
@@ -89,11 +95,6 @@ export default function TelaLista({
       else next.add(id);
       return next;
     });
-  }
-
-  function handleContinuarParaPreenchimento() {
-    if (canaisSelecionados.size === 0) return;
-    setPassoAtual('preencherDados');
   }
 
   function handleVolumeChange(canalId: CanalOrigemId, mes: MesKey, campo: 'total' | 'convertidos', valor: number) {
@@ -113,8 +114,8 @@ export default function TelaLista({
     if (onBatchSaveCanalVolume && modoPreenchimento === 'volume') {
       const payload: Array<{ canalOrigem: CanalOrigemId; totalContatos: number; convertidos: number }> = [];
       canaisAtivos.forEach(({ id }) => {
-        const totalMeses = (volumesMensais[id].mes0.total + volumesMensais[id].mes1.total + volumesMensais[id].mes2.total);
-        const convMeses = (volumesMensais[id].mes0.convertidos + volumesMensais[id].mes1.convertidos + volumesMensais[id].mes2.convertidos);
+        const totalMeses = volumesMensais[id].mes0.total + volumesMensais[id].mes1.total + volumesMensais[id].mes2.total;
+        const convMeses = volumesMensais[id].mes0.convertidos + volumesMensais[id].mes1.convertidos + volumesMensais[id].mes2.convertidos;
         if (totalMeses > 0) {
           payload.push({ canalOrigem: id, totalContatos: totalMeses, convertidos: convMeses });
         }
@@ -132,57 +133,71 @@ export default function TelaLista({
     return t + allContacts.length;
   }, [volumesMensais, canaisAtivos, allContacts]);
 
-  // ─── PASSO 1: Seletor de Canais Ativos ─────────────────────────────────────
-  if (passoAtual === 'selecionarCanais') {
-    return (
-      <div className="w-full max-w-4xl mx-auto space-y-8 py-4">
-        {/* Header */}
-        <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20">
-            <Calendar className="h-3.5 w-3.5 text-indigo-400" />
-            <span className="text-[10px] font-bold tracking-widest text-indigo-400 uppercase">
-              Eixo 02 · Captação ({datas.intervaloTrimestreRecente})
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold text-white leading-snug">
-            Quais canais você usa para atrair pacientes?
-          </h1>
-          <p className="text-sm text-slate-400 leading-relaxed">
-            Selecione apenas os canais que realmente existem no seu consultório hoje.
-            O preenchimento vai aparecer <strong className="text-white">somente para os canais que você marcar</strong>.
-          </p>
+  return (
+    <div className="w-full max-w-5xl mx-auto space-y-8 py-4 animate-fade-in">
+      {/* ── HEADER PRINCIPAL DO EIXO 02 ── */}
+      <div className="space-y-2 border-b border-slate-800 pb-4">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20">
+          <Calendar className="h-3.5 w-3.5 text-indigo-400" />
+          <span className="text-[10px] font-bold tracking-widest text-indigo-400 uppercase">
+            Eixo 02 · Captação ({datas.intervaloTrimestreRecente})
+          </span>
         </div>
+        <h1 className="text-2xl font-bold text-white leading-snug">
+          Canais de Captação &amp; Entrada de Leads
+        </h1>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          Selecione os canais que você utiliza abaixo. As caixas de entrada de contatos serão atualizadas na mesma tela <strong className="text-emerald-400">exibindo apenas os canais selecionados</strong>.
+        </p>
+      </div>
 
-        {/* Card: Perfil sem histórico */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-              <Sparkles className="h-5 w-5" />
-            </div>
-            <div>
-              <span className="text-xs font-bold text-white block">Diversidade de Dados</span>
-              <p className="text-[11px] text-slate-400">
-                {semHistorico ? 'Modo Projeção Orientada A3 ativo.' : 'Não acompanha a origem dos seus leads? Sem problemas!'}
-              </p>
-            </div>
+      {/* ── CARD: PERFIL SEM HISTÓRICO ── */}
+      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xl">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
+            <Sparkles className="h-5 w-5" />
           </div>
-          <button
-            type="button"
-            onClick={() => setSemHistorico(!semHistorico)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
-              semHistorico
-                ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-lg shadow-emerald-500/20'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
-            }`}
-          >
-            {semHistorico ? '✓ Não tenho histórico (Ativo)' : '⚪ Não tenho histórico de leads ainda'}
-          </button>
+          <div>
+            <span className="text-xs font-bold text-white block">Diversidade de Registro</span>
+            <p className="text-[11px] text-slate-400">
+              {semHistorico ? 'Modo Projeção Orientada A3 ativo.' : 'Não acompanha a origem dos seus leads ainda? Sem problemas!'}
+            </p>
+          </div>
         </div>
+        <button
+          type="button"
+          onClick={() => setSemHistorico(!semHistorico)}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+            semHistorico
+              ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-lg shadow-emerald-500/20'
+              : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+          }`}
+        >
+          {semHistorico ? '✓ Não tenho histórico (Ativo)' : '⚪ Não tenho histórico de leads ainda'}
+        </button>
+      </div>
 
-        {!semHistorico && (
-          <>
-            {/* Grid de Canais */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {!semHistorico && (
+        <>
+          {/* ── SEÇÃO 1: SELETOR DE CANAIS ATIVOS (NUMA TELA SÓ) ── */}
+          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                  <span className="flex items-center justify-center h-5 w-5 rounded-full bg-indigo-500 text-[11px] font-bold text-white">1</span>
+                  Quais canais você usa para atrair pacientes?
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Marque ou desmarque os canais. A lista de preenchimento abaixo se ajusta instantaneamente.
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 text-xs font-bold border border-indigo-500/20">
+                {canaisSelecionados.size} de {CANAIS_ORIGEM.length - 1} selecionados
+              </span>
+            </div>
+
+            {/* Grid de Canais Selecionáveis */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {CANAIS_ORIGEM.filter((c) => c.id !== 'nao_rastreado').map((canal) => {
                 const ativo = canaisSelecionados.has(canal.id);
                 return (
@@ -190,15 +205,17 @@ export default function TelaLista({
                     key={canal.id}
                     type="button"
                     onClick={() => toggleCanal(canal.id)}
-                    className={`flex items-center gap-3 p-4 rounded-xl text-left border transition-all cursor-pointer ${
+                    className={`flex items-center gap-3 p-3.5 rounded-xl text-left border transition-all cursor-pointer ${
                       ativo
-                        ? 'bg-indigo-500/15 border-indigo-500/50 text-white shadow-lg shadow-indigo-500/10'
-                        : 'bg-slate-900/80 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-300'
+                        ? 'bg-indigo-500/15 border-indigo-500/50 text-white shadow-md shadow-indigo-500/10'
+                        : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-300'
                     }`}
                   >
-                    <div className={`h-5 w-5 rounded-md flex items-center justify-center flex-none border ${
-                      ativo ? 'bg-indigo-500 border-indigo-400' : 'bg-slate-800 border-slate-700'
-                    }`}>
+                    <div
+                      className={`h-4 w-4 rounded-md flex items-center justify-center flex-none border ${
+                        ativo ? 'bg-indigo-500 border-indigo-400' : 'bg-slate-800 border-slate-700'
+                      }`}
+                    >
                       {ativo && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                     </div>
                     <span className="text-xs font-semibold leading-snug">{canal.label}</span>
@@ -206,319 +223,261 @@ export default function TelaLista({
                 );
               })}
             </div>
+          </div>
 
-            <div className="flex items-center justify-between pt-2">
-              <p className="text-xs text-slate-500">
-                {canaisSelecionados.size} canal(is) selecionado(s)
+          {/* ── SEÇÃO 2: ENTRADA DE LEADS POR MÊS (EXIBE APENAS CANAIS SELECIONADOS) ── */}
+          {canaisSelecionados.size === 0 ? (
+            <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-2">
+              <Sparkles className="h-6 w-6 text-indigo-400 mx-auto" />
+              <h3 className="text-sm font-bold text-white">Nenhum canal selecionado acima</h3>
+              <p className="text-xs text-slate-400">
+                Marque ao menos um canal no bloco acima para exibir as caixas de preenchimento de leads.
               </p>
-              <button
-                type="button"
-                onClick={handleContinuarParaPreenchimento}
-                disabled={canaisSelecionados.size === 0}
-                className={`px-6 py-3 rounded-xl text-xs font-bold transition-all ${
-                  canaisSelecionados.size > 0
-                    ? 'bg-indigo-500 hover:bg-indigo-400 text-white shadow-lg shadow-indigo-500/20 cursor-pointer'
-                    : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                }`}
-              >
-                Continuar com {canaisSelecionados.size} canal(is) selecionado(s) →
-              </button>
             </div>
-          </>
-        )}
-
-        {semHistorico && (
-          <div className="text-center py-8 space-y-4">
-            <p className="text-sm text-slate-300">
-              O Sistema A3 vai gerar uma <strong className="text-indigo-400">Projeção Orientada A3</strong> com metas de referência para{' '}
-              <strong className="text-emerald-400">{datas.intervaloProximos90Dias}</strong>.
-            </p>
-            <button
-              type="button"
-              onClick={onConcluir}
-              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs px-6 py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20 cursor-pointer"
-            >
-              ✓ Gerar Veredito por Projeção
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // ─── PASSO 2: Preenchimento por Boxes Mensais (3 colunas) ──────────────────
-  return (
-    <div className="w-full max-w-6xl mx-auto space-y-6 py-4">
-      {/* Header */}
-      <div className="space-y-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20">
-          <Calendar className="h-3.5 w-3.5 text-indigo-400" />
-          <span className="text-[10px] font-bold tracking-widest text-indigo-400 uppercase">
-            Eixo 02 · Captação ({datas.intervaloTrimestreRecente})
-          </span>
-        </div>
-        <div className="flex items-start justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-2xl font-bold text-white leading-snug">
-              Entrada de Leads por Canal e por Mês
-            </h1>
-            <p className="text-sm text-slate-400 mt-1 leading-relaxed">
-              Preencha quantas pessoas chegaram e quantas fecharam em cada canal, mês a mês.
-              A <strong className="text-slate-200">data exata do dia é opcional</strong> — você pode informar só o total mensal.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => setPassoAtual('selecionarCanais')}
-            className="text-xs text-slate-400 hover:text-slate-200 border border-slate-700 hover:border-slate-600 px-3 py-1.5 rounded-lg transition-all cursor-pointer"
-          >
-            ← Alterar canais selecionados
-          </button>
-        </div>
-      </div>
-
-      {/* Tabs: Modo Volume vs Modo Nominal */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-        <button
-          type="button"
-          onClick={() => setModoPreenchimento('volume')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            modoPreenchimento === 'volume'
-              ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-          }`}
-        >
-          <TrendingUp className="h-4 w-4" /> ⚡ Modo Rápido (Volume por Mês)
-        </button>
-        <button
-          type="button"
-          onClick={() => setModoPreenchimento('nominal')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            modoPreenchimento === 'nominal'
-              ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-              : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-          }`}
-        >
-          <Plus className="h-4 w-4" /> 📝 Modo Detalhado (Lista Nominal)
-        </button>
-      </div>
-
-      {/* ── MODO RÁPIDO: 3 Boxes Mensais em Colunas ── */}
-      {modoPreenchimento === 'volume' && (
-        <div className="space-y-6">
-          {/* Colunas dos 3 meses */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {meses.map(({ key, label }) => (
-              <div key={key} className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl flex flex-col">
-                {/* Cabeçalho do Box do Mês */}
-                <div className="bg-slate-950 border-b border-slate-800 p-4 text-center">
-                  <span className="text-xs font-black text-indigo-400 uppercase tracking-widest">{label}</span>
+          ) : (
+            <div className="space-y-6">
+              {/* Alternador de Modo: Modo Rápido vs Modo Detalhado */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+                <div>
+                  <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span className="flex items-center justify-center h-5 w-5 rounded-full bg-emerald-500 text-[11px] font-bold text-slate-950">2</span>
+                    Entrada de Leads por Mês &amp; Canal ({datas.mesM2}, {datas.mesM1}, {datas.mesM0})
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    Preencha os volumes ou registre pessoas individualmente. Exibindo apenas os{' '}
+                    <strong className="text-emerald-400">{canaisAtivos.length} canais selecionados</strong>.
+                  </p>
                 </div>
 
-                {/* Linhas por Canal Ativo */}
-                <div className="flex-1 divide-y divide-slate-800/60">
-                  {canaisAtivos.length === 0 && (
-                    <p className="text-center text-xs text-slate-500 p-4">Nenhum canal selecionado.</p>
-                  )}
-                  {canaisAtivos.map((canal) => {
-                    const val = volumesMensais[canal.id]?.[key] || { total: 0, convertidos: 0 };
+                <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setModoPreenchimento('volume')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      modoPreenchimento === 'volume'
+                        ? 'bg-emerald-500 text-slate-950 shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    ⚡ Modo Rápido (Volumes)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setModoPreenchimento('nominal')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      modoPreenchimento === 'nominal'
+                        ? 'bg-emerald-500 text-slate-950 shadow'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    📋 Modo Detalhado (Nome a Nome)
+                  </button>
+                </div>
+              </div>
+
+              {/* MODO RÁPIDO (3 COLUNAS MENSAIS COM APENAS CANAIS ATIVOS) */}
+              {modoPreenchimento === 'volume' && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {meses.map((m) => (
+                    <div key={m.key} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-xl">
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {m.label}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {canaisAtivos.reduce((acc, c) => acc + (volumesMensais[c.id][m.key].total || 0), 0)} leads
+                        </span>
+                      </div>
+
+                      {/* Exibe APENAS os canais que o usuário marcou acima */}
+                      <div className="space-y-3">
+                        {canaisAtivos.map((canal) => {
+                          const vol = volumesMensais[canal.id][m.key];
+                          return (
+                            <div key={canal.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                              <span className="text-xs font-semibold text-slate-200 block truncate" title={canal.label}>
+                                {canal.label}
+                              </span>
+
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="text-[9px] font-bold text-slate-400 block mb-1">Chegaram:</label>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    value={vol.total || ''}
+                                    onChange={(e) =>
+                                      handleVolumeChange(canal.id, m.key, 'total', Math.max(0, parseInt(e.target.value) || 0))
+                                    }
+                                    placeholder="0"
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-bold focus:border-emerald-500"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="text-[9px] font-bold text-emerald-400 block mb-1">Viraram Pacientes:</label>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={vol.total}
+                                    value={vol.convertidos || ''}
+                                    onChange={(e) =>
+                                      handleVolumeChange(canal.id, m.key, 'convertidos', Math.max(0, parseInt(e.target.value) || 0))
+                                    }
+                                    placeholder="0"
+                                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-emerald-400 font-bold focus:border-emerald-500"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* MODO DETALHADO (3 BLOCOS COLAPSÁVEIS MENSAIS NOMINAIS) */}
+              {modoPreenchimento === 'nominal' && (
+                <div className="space-y-4">
+                  {[
+                    { key: 'mesM2', label: datas.mesM2, anoMes: datas.mesM2AnoMes },
+                    { key: 'mesM1', label: datas.mesM1, anoMes: datas.mesM1AnoMes },
+                    { key: 'mesM0', label: datas.mesM0, anoMes: datas.mesM0AnoMes },
+                  ].map((blocoMes) => {
+                    const contatosDoMes = allContacts.filter(
+                      (c) => (c.data || '').substring(0, 7) === blocoMes.anoMes && canaisSelecionados.has(c.canalOrigem)
+                    );
+                    const convertidosMes = contatosDoMes.filter((c) => c.statusFechamento === 'sim').length;
+                    const taxaMes = contatosDoMes.length > 0 ? Math.round((convertidosMes / contatosDoMes.length) * 100) : 0;
+                    const isOpen = openMeses[blocoMes.label] ?? true;
+
                     return (
-                      <div key={canal.id} className="p-3 space-y-2">
-                        <p className="text-[10px] font-bold text-slate-300 leading-snug">{canal.label}</p>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="text-[8px] text-slate-500 uppercase font-bold block mb-1">Contatos</label>
-                            <input
-                              type="number"
-                              min="0"
-                              value={val.total || ''}
-                              onChange={(e) => handleVolumeChange(canal.id, key, 'total', parseInt(e.target.value, 10) || 0)}
-                              placeholder="0"
-                              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-white font-mono font-bold text-center"
-                            />
+                      <div key={blocoMes.key} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+                        {/* Header do Mês */}
+                        <div
+                          onClick={() =>
+                            setOpenMeses((prev) => ({ ...prev, [blocoMes.label]: !prev[blocoMes.label] }))
+                          }
+                          className="p-4 bg-slate-900 hover:bg-slate-800/80 transition-all flex items-center justify-between cursor-pointer border-b border-slate-800/60"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Calendar className="h-4 w-4 text-emerald-400" />
+                            <h3 className="text-sm font-bold text-white">{blocoMes.label}</h3>
+                            <span className="px-2.5 py-0.5 rounded-full bg-slate-800 text-[11px] font-bold text-slate-300">
+                              {contatosDoMes.length} contatos
+                            </span>
+                            {contatosDoMes.length > 0 && (
+                              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 text-[11px] font-bold border border-emerald-500/20">
+                                Conversão: {taxaMes}%
+                              </span>
+                            )}
                           </div>
-                          <div>
-                            <label className="text-[8px] text-emerald-500 uppercase font-bold block mb-1">Fecharam</label>
-                            <input
-                              type="number"
-                              min="0"
-                              max={val.total}
-                              value={val.convertidos || ''}
-                              onChange={(e) => handleVolumeChange(canal.id, key, 'convertidos', parseInt(e.target.value, 10) || 0)}
-                              placeholder="0"
-                              className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-xs text-emerald-400 font-mono font-bold text-center"
-                            />
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onStartAdd(blocoMes.anoMes + '-01');
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                            >
+                              <Plus className="h-3.5 w-3.5" /> Adicionar neste mês
+                            </button>
+                            {isOpen ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
                           </div>
                         </div>
+
+                        {/* Conteúdo Nominal do Mês */}
+                        {isOpen && (
+                          <div className="p-4 space-y-2">
+                            {contatosDoMes.length === 0 ? (
+                              <p className="text-xs text-slate-500 py-3 text-center">
+                                Nenhum contato registrado para {blocoMes.label} nos canais selecionados.
+                              </p>
+                            ) : (
+                              contatosDoMes.map((contato) => (
+                                <div
+                                  key={contato.id}
+                                  className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <span className="font-bold text-white">{contato.nomeContato}</span>
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300">
+                                      {getLabelCanalById(contato.canalOrigem)}
+                                    </span>
+                                    <span
+                                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                        contato.statusFechamento === 'sim'
+                                          ? 'bg-emerald-500/20 text-emerald-300'
+                                          : 'bg-slate-800 text-slate-400'
+                                      }`}
+                                    >
+                                      {contato.statusFechamento === 'sim' ? '✓ Virou Paciente' : 'Não Fechou'}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => onEditar(contato)}
+                                      className="p-1 text-slate-400 hover:text-white cursor-pointer"
+                                      title="Editar"
+                                    >
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => onExcluir(contato.id)}
+                                      className="p-1 text-slate-400 hover:text-red-400 cursor-pointer"
+                                      title="Excluir"
+                                    >
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
-
-                {/* Footer do box do mês */}
-                <div className="p-3 bg-slate-950 border-t border-slate-800 text-center">
-                  {(() => {
-                    const totMes = canaisAtivos.reduce((acc, c) => acc + (volumesMensais[c.id]?.[key]?.total || 0), 0);
-                    const convMes = canaisAtivos.reduce((acc, c) => acc + (volumesMensais[c.id]?.[key]?.convertidos || 0), 0);
-                    return (
-                      <div className="flex items-center justify-center gap-4">
-                        <span className="text-[10px] text-slate-400"><span className="text-white font-bold">{totMes}</span> contatos</span>
-                        <span className="text-[10px] text-slate-400"><span className="text-emerald-400 font-bold">{convMes}</span> fecharam</span>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── MODO NOMINAL: Lista contínua de contatos ── */}
-      {modoPreenchimento === 'nominal' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-300">
-              {allContacts.length} contato(s) cadastrado(s) nominalmente em {datas.intervaloTrimestreRecente}
-            </span>
-            <button
-              type="button"
-              onClick={onStartAdd}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-xs font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all cursor-pointer"
-            >
-              <Plus className="h-4 w-4" /> Cadastrar Novo Contato
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            {[
-              { anoMes: (() => { const d = new Date(new Date().getFullYear(), new Date().getMonth() - 2, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; })(), label: datas.mesM2 },
-              { anoMes: (() => { const d = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; })(), label: datas.mesM1 },
-              { anoMes: `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`, label: datas.mesM0 }
-            ].map(({ anoMes, label }) => {
-              const contatosMes = allContacts.filter((c) => c.data.substring(0, 7) === anoMes);
-              const convertidos = contatosMes.filter((c) => c.statusFechamento === 'sim').length;
-              const total = contatosMes.length;
-              const taxa = total > 0 ? (convertidos / total * 100).toFixed(0) + '%' : '0%';
-
-              return (
-                <GrupoMes
-                  key={anoMes}
-                  anoMes={anoMes}
-                  label={label}
-                  contatos={contatosMes}
-                  total={total}
-                  taxa={taxa}
-                  onEditar={onEditar}
-                  onExcluir={onExcluir}
-                  onStartAdd={onStartAdd}
-                />
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Barra de Conclusão ── */}
-      <div className="sticky bottom-0 bg-slate-950/90 backdrop-blur border-t border-slate-800 p-4 mt-4 -mx-4 sm:-mx-8 flex items-center justify-between gap-4 flex-wrap rounded-t-2xl">
-        <div className="text-xs text-slate-400">
-          Total no período:{' '}
-          <strong className="text-white text-sm">{totalGeralVolume}</strong> contato(s) registrado(s) em{' '}
-          <strong className="text-emerald-400">{datas.intervaloTrimestreRecente}</strong>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleConcluir}
-          disabled={totalGeralVolume === 0}
-          className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-bold transition-all ${
-            totalGeralVolume > 0
-              ? 'bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white shadow-lg shadow-indigo-500/25 cursor-pointer'
-              : 'bg-slate-800 text-slate-500 cursor-not-allowed'
-          }`}
-        >
-          <Check className="h-4 w-4" /> Concluir e Gerar Veredito de Captação
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function GrupoMes({ anoMes, label, contatos, total, taxa, onEditar, onExcluir, onStartAdd }: any) {
-  const [aberto, setAberto] = useState(total > 0);
-
-  const getCorCanal = (canal: string) => {
-    switch (canal) {
-      case 'indicacao_boca_a_boca': return 'bg-emerald-500/20 text-emerald-300';
-      case 'instagram_organico': return 'bg-purple-500/20 text-purple-300';
-      case 'trafego_pago': return 'bg-amber-500/20 text-amber-300';
-      case 'parcerias_medicas': return 'bg-sky-500/20 text-sky-300';
-      case 'reativacao_antigos': return 'bg-orange-500/20 text-orange-300';
-      default: return 'bg-slate-500/20 text-slate-300';
-    }
-  };
-
-  return (
-    <div className="bg-slate-900/80 border border-slate-800 rounded-2xl overflow-hidden shadow-xl mb-4">
-      <div
-        className="flex items-center justify-between p-4 bg-slate-950 border-b border-slate-800 cursor-pointer hover:bg-slate-900 transition-colors"
-        onClick={() => setAberto(!aberto)}
-      >
-        <div className="flex items-center gap-3">
-          {aberto ? <ChevronUp className="h-5 w-5 text-slate-400" /> : <ChevronDown className="h-5 w-5 text-slate-400" />}
-          <span className="text-sm font-bold text-white">{label}</span>
-          <span className="text-xs text-slate-400 bg-slate-800 px-2 py-1 rounded-full">{total} contatos</span>
-          {total > 0 && <span className="text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-1 rounded-full">Conversão: {taxa}</span>}
-        </div>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onStartAdd(anoMes); }}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-[10px] font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all cursor-pointer"
-        >
-          <Plus className="h-3 w-3" /> Adicionar Contato
-        </button>
-      </div>
-
-      {aberto && (
-        <>
-          {total === 0 ? (
-            <div className="p-6 text-center text-xs text-slate-500">
-              Nenhum contato registrado neste mês.
-            </div>
-          ) : (
-            <div>
-              <div className="grid grid-cols-12 gap-2 p-3 bg-slate-900/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-800">
-                <div className="col-span-5">Nome do Contato</div>
-                <div className="col-span-3">Canal de Origem</div>
-                <div className="col-span-2">Fechou?</div>
-                <div className="col-span-2 text-right">Ação</div>
-              </div>
-              {contatos.map((c: any) => (
-                <div key={c.id} className="grid grid-cols-12 gap-2 p-3 text-xs items-center border-b border-slate-800/60 hover:bg-slate-850/50">
-                  <div className="col-span-5 font-bold text-white">{c.nomeContato}</div>
-                  <div className="col-span-3 flex items-center">
-                    <span className={`px-2 py-1 rounded-full text-[10px] font-bold truncate ${getCorCanal(c.canalOrigem)}`}>
-                      {getLabelCanalById(c.canalOrigem)}
-                    </span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${c.statusFechamento === 'sim' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-800 text-slate-400'}`}>
-                      {c.statusFechamento === 'sim' ? 'Sim ✓' : 'Não'}
-                    </span>
-                  </div>
-                  <div className="col-span-2 flex justify-end gap-2">
-                    <button type="button" onClick={() => onEditar(c)} className="p-1.5 text-slate-400 hover:text-white cursor-pointer">
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button type="button" onClick={() => onExcluir(c.id)} className="p-1.5 text-slate-400 hover:text-red-400 cursor-pointer">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+              )}
             </div>
           )}
+
+          {/* ── BOTÃO DE CONCLUSÃO DO EIXO 02 ── */}
+          <div className="flex justify-end border-t border-slate-800 pt-6">
+            <button
+              type="button"
+              onClick={handleConcluir}
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm px-8 py-3.5 rounded-xl transition-all shadow-xl shadow-emerald-500/20 flex items-center gap-2 cursor-pointer"
+            >
+              Concluir Captação e Avançar para Vendas (Eixo 03) →
+            </button>
+          </div>
         </>
+      )}
+
+      {semHistorico && (
+        <div className="text-center py-8 space-y-4">
+          <p className="text-sm text-slate-300">
+            O Sistema A3 vai gerar uma <strong className="text-indigo-400">Projeção Orientada A3</strong> com metas de referência para{' '}
+            <strong className="text-emerald-400">{datas.intervaloProximos90Dias}</strong>.
+          </p>
+          <button
+            type="button"
+            onClick={onConcluir}
+            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs px-6 py-3 rounded-xl transition-all shadow-lg shadow-emerald-500/20 cursor-pointer"
+          >
+            ✓ Gerar Veredito por Projeção
+          </button>
+        </div>
       )}
     </div>
   );
