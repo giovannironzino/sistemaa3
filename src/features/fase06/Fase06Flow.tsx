@@ -25,10 +25,12 @@ interface Fase06FlowProps {
   uid: string;
   initialState?: any;
   pacientesEixo01?: Array<{ id: string; nome: string; ticketPagoEstimado?: number; mesAtendimento?: string }>;
+  pacientesEixo01List?: any[];
+  servicosEixo04?: any[];
   onAvancarEixo07?: () => void;
 }
 
-export default function Fase06Flow({ uid, initialState, pacientesEixo01 = [], onAvancarEixo07 }: Fase06FlowProps) {
+export default function Fase06Flow({ uid, initialState, pacientesEixo01 = [], pacientesEixo01List, servicosEixo04, onAvancarEixo07 }: Fase06FlowProps) {
   // 1. Horas por dia em ordem cronológica
   const [horasPorDia, setHorasPorDia] = useState<Record<string, number>>(() => {
     const init = initialState?.horasPorDia || {};

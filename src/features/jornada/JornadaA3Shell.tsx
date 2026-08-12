@@ -323,19 +323,26 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
           <Fase06Flow
             uid={uid}
             initialState={clientRecord?.fase06 ?? null}
+            pacientesEixo01List={clientRecord?.fase01?.pacientes ?? []}
+            servicosEixo04={clientRecord?.fase04?.servicos ?? []}
             onAvancarEixo07={() => setFaseFocada('fase07_equipe')}
           />
         ) : faseFocada === 'fase07_equipe' ? (
           <Fase07Flow
             uid={uid}
             initialState={clientRecord?.fase07 ?? null}
+            pacientesAtivosContagem={clientRecord?.fase01?.totalPacientesAtivos ?? 38}
+            microAcoesDelegadasEixo06={clientRecord?.fase06?.microAcoesDelegadas ?? []}
             onAvancarEixo08={() => setFaseFocada('fase08_financeiro')}
           />
         ) : faseFocada === 'fase08_financeiro' ? (
           <Fase08Flow
             uid={uid}
             initialState={clientRecord?.fase08 ?? null}
+            pacientesEixo01Count={clientRecord?.fase01?.totalPacientesAtivos ?? 38}
+            pacientesEixo01List={clientRecord?.fase01?.pacientes ?? []}
             custoEquipeEixo07={clientRecord?.fase07?.custoTotalEquipe ?? 0}
+            servicosEixo04={clientRecord?.fase04?.servicos ?? []}
             clientRecord={clientRecord}
             onAvancarEixo09={() => setFaseFocada('fase09_metas_simulacao')}
           />
