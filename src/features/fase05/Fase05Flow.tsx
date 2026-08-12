@@ -5,7 +5,7 @@
 import React, { useState, useMemo } from 'react';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { PackageCheck, CheckCircle2, ArrowRight, Sparkles, Users, MessageSquare, ShieldAlert, HeartHandshake, Stethoscope, FileSpreadsheet, Clock, UserCheck } from 'lucide-react';
+import { PackageCheck, CheckCircle2, ArrowRight, Sparkles, Users, MessageSquare, ShieldAlert, HeartHandshake, Stethoscope, FileSpreadsheet, Clock, UserCheck, ChevronDown, ChevronUp, Calculator, Layers } from 'lucide-react';
 import { CATALOGO_20_ENTREGAVEIS, CATALOGO_RITOS_RETENCAO_CS, ExecutorEntregavel } from './catalogo20Entregaveis';
 import { calcularRetencaoECarga, EstadoEntregavelItem, EstadoRitoRetencaoItem } from './lib/calcularRetencaoECarga';
 
@@ -89,6 +89,32 @@ export default function Fase05Flow({
   );
 
   const [salvo, setSalvo] = useState(false);
+
+  // Controla qual item da lista de 20 entregáveis está expandido (Accordion)
+  const [itemExpandidoId, setItemExpandidoId] = useState<string | null>(null);
+
+  function handleProdutoToggle(entregavelId: string, produtoId: string) {
+    setEstadoEntregaveis((prev) => {
+      const atual = prev[entregavelId] || {
+        ativo: true,
+        servicosEixo04Ids: [],
+        tipoEntrega: 'personalizada',
+        frequenciaMensal: 1,
+        duracaoMinutos: 15,
+        executor: 'expert',
+      };
+      const idsAntigos = atual.servicosEixo04Ids || [];
+      const contem = idsAntigos.includes(produtoId);
+      const novosIds = contem
+        ? idsAntigos.filter((id) => id !== produtoId)
+        : [...idsAntigos, produtoId];
+
+      return {
+        ...prev,
+        [entregavelId]: { ...atual, servicosEixo04Ids: novosIds },
+      };
+    });
+  }
 
   // Motor de Cálculo
   const analise = useMemo(() => {
@@ -174,7 +200,7 @@ export default function Fase05Flow({
             1. Os 20 Entregáveis da Sua Rotina Clínica (Vinculados ao Eixo 04)
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Selecione quais dos 20 pontos de contato você entrega aos seus pacientes, em quais produtos eles ocorrem e quanto tempo exigem.
+            Responda <strong>SIM</strong> ou <strong>NÃO</strong> para cada entregável. Ao selecionar SIM, expanda o card para selecionar em quais produtos do Eixo 04 ele ocorre, a frequência e visualizar o <strong>cálculo de carga horária ao vivo</strong>.
           </p>
         </div>
 
@@ -189,99 +215,183 @@ export default function Fase05Flow({
               executor: item.executorDefault,
             };
 
+            const isExpandido = itemExpandidoId === item.id;
+            const minMensalPaciente = est.ativo ? est.frequenciaMensal * est.duracaoMinutos : 0;
+            const horasMensalConsultorio = Number(((minMensalPaciente * pacientesEixo01Count) / 60).toFixed(1));
+
             return (
               <div
                 key={item.id}
-                className={`p-4 rounded-xl border transition-all ${
+                className={`rounded-xl border transition-all overflow-hidden ${
                   est.ativo
                     ? 'bg-slate-950/90 border-slate-800'
-                    : 'bg-slate-950/40 border-slate-900 opacity-60'
+                    : 'bg-slate-950/40 border-slate-900 opacity-70'
                 }`}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <label className="flex items-start gap-3 cursor-pointer flex-1">
-                    <input
-                      type="checkbox"
-                      checked={est.ativo}
-                      onChange={() => toggleEntregavelAtivo(item.id)}
-                      className="mt-1 h-4 w-4 rounded border-slate-700 text-emerald-500 focus:ring-0 cursor-pointer"
-                    />
-                    <div>
+                {/* Linha Principal (Header do Card) */}
+                <div className="p-4 flex items-start justify-between gap-3 flex-wrap">
+                  <div className="space-y-0.5 max-w-xl flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-xs font-bold text-white block">{item.titulo}</span>
-                      <span className="text-[11px] text-slate-400 block leading-relaxed">{item.descricao}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded text-[9px] font-bold border shrink-0 ${
+                          est.executor === 'expert'
+                            ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20'
+                            : est.executor === 'equipe'
+                            ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
+                            : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
+                        }`}
+                      >
+                        {est.executor === 'expert' ? '👤 Expert' : est.executor === 'equipe' ? '👥 Equipe' : '🤖 Sistema'}
+                      </span>
                     </div>
-                  </label>
+                    <span className="text-[11px] text-slate-400 block leading-relaxed">{item.descricao}</span>
+                  </div>
 
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold border shrink-0 ${
-                      est.executor === 'expert'
-                        ? 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20'
-                        : est.executor === 'equipe'
-                        ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20'
-                        : 'bg-amber-500/10 text-amber-300 border-amber-500/20'
-                    }`}
-                  >
-                    {est.executor === 'expert' ? '👤 Expert' : est.executor === 'equipe' ? '👥 Equipe' : '🤖 Sistema'}
-                  </span>
+                  {/* Botões SIM / NÃO & Botão Expandir */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleEntregavelChange(item.id, { ativo: true })}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        est.ativo
+                          ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                          : 'bg-slate-900 border border-slate-800 text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      ☑️ SIM
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleEntregavelChange(item.id, { ativo: false })}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        !est.ativo
+                          ? 'bg-slate-800 text-slate-300 border border-slate-700'
+                          : 'bg-slate-900 border border-slate-800 text-slate-500 hover:text-slate-300'
+                      }`}
+                    >
+                      ❌ NÃO
+                    </button>
+
+                    {est.ativo && (
+                      <button
+                        type="button"
+                        onClick={() => setItemExpandidoId(isExpandido ? null : item.id)}
+                        className="p-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer ml-1"
+                        title={isExpandido ? 'Recolher detalhes' : 'Expandir detalhes'}
+                      >
+                        {isExpandido ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* Configurações Expandidas se Ativo */}
-                {est.ativo && (
-                  <div className="mt-4 pt-3 border-t border-slate-800/80 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                        Formato da Entrega:
+                {/* Bloco Expandido de Opções (Quando SIM e Expandido) */}
+                {est.ativo && isExpandido && (
+                  <div className="p-4 bg-slate-900/60 border-t border-slate-800/80 space-y-4 text-xs animate-fade-in">
+                    {/* Vínculo com os Produtos do Eixo 04 */}
+                    <div className="space-y-1.5">
+                      <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
+                        <Layers className="h-3.5 w-3.5 text-indigo-400" />
+                        Em quais produtos / serviços do Eixo 04 você realiza esta entrega?
                       </label>
-                      <select
-                        value={est.tipoEntrega}
-                        onChange={(e) =>
-                          handleEntregavelChange(item.id, {
-                            tipoEntrega: e.target.value as 'padrao' | 'personalizada',
-                          })
-                        }
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-semibold focus:border-emerald-500"
-                      >
-                        <option value="personalizada">🎨 Personalizada Individual</option>
-                        <option value="padrao">⚙️ Padrão / Automatizada</option>
-                      </select>
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {listaServicos.map((s) => {
+                          const marcado = est.servicosEixo04Ids.includes(s.id);
+                          return (
+                            <button
+                              key={s.id}
+                              type="button"
+                              onClick={() => handleProdutoToggle(item.id, s.id)}
+                              className={`px-3 py-1.5 rounded-lg border font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                marcado
+                                  ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-200'
+                                  : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
+                              }`}
+                            >
+                              <span className="text-[10px]">{marcado ? '☑️' : '⏹️'}</span>
+                              <span>{s.nome}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
 
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                        Executor Principal:
-                      </label>
-                      <select
-                        value={est.executor}
-                        onChange={(e) =>
-                          handleEntregavelChange(item.id, {
-                            executor: e.target.value as ExecutorEntregavel,
-                          })
-                        }
-                        className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-semibold focus:border-emerald-500"
-                      >
-                        <option value="expert">👤 Nutricionista Principal (Expert)</option>
-                        <option value="equipe">👥 Equipe de Apoio (Nutrianjos/Secretária)</option>
-                        <option value="sistema">🤖 Sistema / App Automático</option>
-                      </select>
-                    </div>
+                    {/* Frequência, Executor e Minutos */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+                          Quantas Vezes no Mês? (Frequência):
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            value={est.frequenciaMensal}
+                            onChange={(e) =>
+                              handleEntregavelChange(item.id, {
+                                frequenciaMensal: parseInt(e.target.value, 10) || 1,
+                              })
+                            }
+                            className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-emerald-400 font-bold text-right focus:border-emerald-500"
+                          />
+                          <span className="text-[10px] text-slate-400 shrink-0">x / mês</span>
+                        </div>
+                      </div>
 
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                        Tempo por Atendimento (Minutos):
-                      </label>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min={1}
-                          value={est.duracaoMinutos}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+                          Tempo por Atendimento (Minutos):
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min={1}
+                            value={est.duracaoMinutos}
+                            onChange={(e) =>
+                              handleEntregavelChange(item.id, {
+                                duracaoMinutos: parseInt(e.target.value, 10) || 1,
+                              })
+                            }
+                            className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-amber-400 font-bold text-right focus:border-emerald-500"
+                          />
+                          <span className="text-[10px] text-slate-400 shrink-0">min / entrega</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
+                          Executor Principal:
+                        </label>
+                        <select
+                          value={est.executor}
                           onChange={(e) =>
                             handleEntregavelChange(item.id, {
-                              duracaoMinutos: parseInt(e.target.value, 10) || 1,
+                              executor: e.target.value as ExecutorEntregavel,
                             })
                           }
-                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-emerald-400 font-bold text-right focus:border-emerald-500"
-                        />
-                        <span className="text-[10px] text-slate-400 shrink-0">min/paciente</span>
+                          className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-semibold focus:border-emerald-500"
+                        >
+                          <option value="expert">👤 Nutricionista Principal (Expert)</option>
+                          <option value="equipe">👥 Equipe de Apoio (Nutrianjos/Secretária)</option>
+                          <option value="sistema">🤖 Sistema / App Automático</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* ⚡ CÁLCULO PRÉVIO AO VIVO NA TELA */}
+                    <div className="p-3 rounded-xl bg-slate-950 border border-indigo-500/30 flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2 text-indigo-300 font-bold text-[11px]">
+                        <Calculator className="h-4 w-4 text-indigo-400 shrink-0" />
+                        <span>⚡ Cálculo de Impacto de Carga Horária ao Vivo:</span>
+                      </div>
+                      <div className="font-mono text-[11px] font-bold flex items-center gap-3">
+                        <span className="text-slate-300">
+                          {est.frequenciaMensal}x/mês × {est.duracaoMinutos}min = <strong className="text-emerald-400">{minMensalPaciente} min/mês por paciente</strong>
+                        </span>
+                        <span className="text-indigo-300 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                          Total Consultório ({pacientesEixo01Count} pac): {horasMensalConsultorio}h / mês
+                        </span>
                       </div>
                     </div>
                   </div>
