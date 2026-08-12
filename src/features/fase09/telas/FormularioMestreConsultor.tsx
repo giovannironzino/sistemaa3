@@ -39,6 +39,7 @@ import { calcularResultadoSimulacao } from '../lib/calcularResultadoSimulacao';
 import { salvarSincronizacaoGlobalClient } from '../lib/eixo09Service';
 import { ENTREGAVEIS_OPTIONS, NIVEL_CUSTOMIZACAO_OPTIONS, SLA_RESPOSTA_OPTIONS } from '../../../lib/initialData';
 import { obterDatasA3 } from '../../../lib/dateUtils';
+import GavetaAplicarMetas from './GavetaAplicarMetas';
 
 // OPCÕES PADRONIZADAS DO SISTEMA A3
 const OPCOES_DOR_CLUSTER = [
@@ -117,6 +118,7 @@ export default function FormularioMestreConsultor({
   onVoltarSimuladorCards,
 }: FormularioMestreConsultorProps) {
   const [state, setState] = useState<SimuladorState>(initialState);
+  const [gavetaAplicarAberta, setGavetaAplicarAberta] = useState(false);
   const datas = useMemo(() => obterDatasA3(null), []);
 
   // Estado expansível das Sanfonas por Eixo
@@ -400,15 +402,26 @@ export default function FormularioMestreConsultor({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleHidratacaoTotalSistema}
-            disabled={salvandoSync}
-            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs px-6 py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 cursor-pointer shrink-0"
-          >
-            {salvandoSync ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {salvandoSync ? 'Gravando no Firestore...' : '⚡ Salvar & Popular 100% do Sistema A3'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setGavetaAplicarAberta(true)}
+              className="btn-primary inline-flex items-center gap-2 px-5 py-3.5 text-xs font-extrabold rounded-xl shadow-lg shadow-indigo-600/30 cursor-pointer"
+            >
+              <Sparkles className="h-4 w-4" />
+              🚀 Transformar Simulação em Metas Reais
+            </button>
+
+            <button
+              type="button"
+              onClick={handleHidratacaoTotalSistema}
+              disabled={salvandoSync}
+              className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs px-6 py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 cursor-pointer shrink-0"
+            >
+              {salvandoSync ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {salvandoSync ? 'Gravando no Firestore...' : '⚡ Salvar & Popular 100% do Sistema A3'}
+            </button>
+          </div>
         </div>
 
         {mensagemSucesso && (
@@ -1232,6 +1245,20 @@ export default function FormularioMestreConsultor({
           </div>
         </div>
       </div>
+
+      {/* GAVETA DE APLICAÇÃO E RETROALIMENTAÇÃO DE METAS NO SISTEMA */}
+      <GavetaAplicarMetas
+        isOpen={gavetaAplicarAberta}
+        onClose={() => setGavetaAplicarAberta(false)}
+        uid={uid}
+        state={state}
+        resultado={resultado}
+        contexto={contexto}
+        onSucesso={(msg) => {
+          setMensagemSucesso(msg);
+          setTimeout(() => setMensagemSucesso(null), 5000);
+        }}
+      />
     </div>
   );
 }

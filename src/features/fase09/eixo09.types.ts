@@ -32,11 +32,30 @@ export interface OfertaEcossistema {
   quantidadeEstimada: number;
 }
 
+export interface DesdobramentoCargaHoraria {
+  atendimentoClinico: number;
+  prescricaoPlanos: number;
+  comercialWhatsapp: number;
+  gestaoMarketing: number;
+  estudos: number;
+}
+
+export interface MarcoMensalCrescimento {
+  mes: number;
+  lucroEstimado: number;
+  novosPacientesAcumulados: number;
+  leadsSemanaExigidos: number;
+}
+
 export interface SimuladorState {
   // Abertura
   numeroMagico: number;
   limitePreAprovado: number | null;          // null se Receita_Media_Real = 0 (sem histórico)
   tetoSemanaPerfeita: number;                // horas/semana
+  prazoMeses: 1 | 3 | 6 | 12;                // Horizonte Temporal da Meta
+
+  // Carga Horária Desdobrada (Obs 03)
+  desdobramentoCargaHoraria?: DesdobramentoCargaHoraria;
 
   // Forma de recebimento
   formaRecebimento: FormaRecebimentoId;
@@ -94,6 +113,16 @@ export interface SimuladorState {
   quantidadeResgatar: number;
   taxaSucessoPercentual: number;
 
+  // Meta Financeira (Eixo 08 Integrado)
+  metaLucroLiquidoReais?: number;
+  metaFaturamentoBrutoReais?: number;
+
+  // Visualização Híbrida Sintética / Analítica
+  modoExibicaoColuna1?: 'sintetico' | 'analitico';
+  modoExibicaoColuna3?: 'sintetico' | 'analitico';
+  itensExpandidosColuna1?: Record<string, boolean>;
+  itensExpandidosColuna3?: Record<string, boolean>;
+
   premissas: Fase09Assumptions;
 }
 
@@ -108,6 +137,12 @@ export interface ResultadoSimulado {
   lucroLiquidoSimulado: number;
   bateuNumeroMagico: boolean;
   respeitouTetoSemanaPerfeita: boolean;
+  // Novos campos de Exequibilidade & Linguagem Simples
+  scoreExequibilidadeA3: number; // 0 a 100%
+  classificacaoExequibilidade: 'Alta Viabilidade' | 'Esforço Moderado' | 'Desafio Elevado' | 'Risco de Exaustão';
+  explicacaoSimplesExequibilidade: string;
+  narrativaMaterializacaoSonho: string;
+  marcosMensais: MarcoMensalCrescimento[];
 }
 
 export interface ResumoSimulacaoEixo09 {

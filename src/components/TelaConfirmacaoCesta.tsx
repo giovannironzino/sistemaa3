@@ -10,6 +10,7 @@ interface TelaConfirmacaoCestaProps {
   itensIniciais: ItemCestaExtraido[];
   softwareDetectado?: string;
   totalAtivosDetectados?: number;
+  ocultarHeader?: boolean;
   onConfirmar: (itensValidados: ItemCestaExtraido[]) => void;
   onCancelar: () => void;
 }
@@ -18,6 +19,7 @@ export default function TelaConfirmacaoCesta({
   itensIniciais,
   softwareDetectado = 'WebDiet / WhatsApp',
   totalAtivosDetectados = 35,
+  ocultarHeader = false,
   onConfirmar,
   onCancelar,
 }: TelaConfirmacaoCestaProps) {
@@ -40,62 +42,73 @@ export default function TelaConfirmacaoCesta({
   const itensPendente = itens.filter((i) => i.statusIntegridade === 'pendente').length;
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6 py-4 animate-fade-in">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/60 to-slate-900 border border-indigo-500/40 rounded-2xl p-6 space-y-3 shadow-2xl">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
-            <Sparkles className="h-5 w-5" />
+    <div className="w-full max-w-4xl mx-auto space-y-6 py-2 animate-fade-in">
+      {/* Header (Opcional) */}
+      {!ocultarHeader && (
+        <div className="bg-gradient-to-r from-slate-900 via-indigo-950/60 to-slate-900 border border-indigo-500/40 rounded-2xl p-6 space-y-3 shadow-2xl">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">
+                O Grande Colhedor A3 · Validação Humana Item por Item
+              </span>
+              <h1 className="text-xl font-bold text-white leading-tight">
+                Revisão &amp; Confirmação da Cesta de Dados
+              </h1>
+            </div>
           </div>
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">
-              O Grande Colhedor A3 · Validação Humana Item por Item
+
+          <p className="text-xs text-slate-300 leading-relaxed">
+            💡 Encontramos <strong className="text-emerald-400">{itens.length} registros</strong> a partir dos relatórios/prints do <strong className="text-white">{softwareDetectado}</strong>.
+            Confira cada item abaixo e preencha as dúvidas destacadas em amarelo ou vermelho. <strong>O usuário é o detentor original da informação!</strong>
+          </p>
+
+          {/* Indicadores de Integridade */}
+          <div className="flex items-center gap-3 pt-2 text-xs">
+            <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">
+              🟢 {itensOk} Identificados com Precisão
             </span>
-            <h1 className="text-xl font-bold text-white leading-tight">
-              Revisão &amp; Confirmação da Cesta de Dados
-            </h1>
+            {itensDuvida > 0 && (
+              <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold">
+                🟡 {itensDuvida} Com Dúvida
+              </span>
+            )}
+            {itensPendente > 0 && (
+              <span className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 font-bold">
+                🔴 {itensPendente} Pendentes de Nome
+              </span>
+            )}
           </div>
         </div>
+      )}
 
-        <p className="text-xs text-slate-300 leading-relaxed">
-          💡 Encontramos <strong className="text-emerald-400">{itens.length} registros</strong> a partir dos relatórios/prints do <strong className="text-white">{softwareDetectado}</strong>.
-          Confira cada item abaixo e preencha as dúvidas destacadas em amarelo ou vermelho. <strong>O usuário é o detentor original da informação!</strong>
-        </p>
-
-        {/* Indicadores de Integridade */}
-        <div className="flex items-center gap-3 pt-2 text-xs">
-          <span className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold">
-            🟢 {itensOk} Identificados com Precisão
+      {/* Indicador de Resumo Limpo quando ocultarHeader for True */}
+      {ocultarHeader && (
+        <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 text-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+          <span className="text-slate-200 font-medium">
+            Encontramos <strong className="text-emerald-400">{itens.length} pacientes válidos</strong> no relatório do <strong className="text-white">{softwareDetectado}</strong>.
           </span>
-          {itensDuvida > 0 && (
-            <span className="px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-bold">
-              🟡 {itensDuvida} Com Dúvida
-            </span>
-          )}
-          {itensPendente > 0 && (
-            <span className="px-3 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 font-bold">
-              🔴 {itensPendente} Pendentes de Nome
-            </span>
-          )}
+          <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-mono font-bold shrink-0">
+            ✓ 100% Sanitizado
+          </span>
         </div>
-      </div>
+      )}
 
       {/* Lista de Itens para Validação Pessoa por Pessoa */}
-      <div className="space-y-3">
+      <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
         {itens.map((item, idx) => {
           const isOk = item.statusIntegridade === 'ok';
           const isDuvida = item.statusIntegridade === 'duvida';
-          const isPendente = item.statusIntegridade === 'pendente';
 
           return (
             <div
               key={item.id}
-              className={`p-4 rounded-2xl border transition-all space-y-3 ${
+              className={`p-3.5 rounded-2xl border transition-all space-y-2 ${
                 isOk
                   ? 'bg-slate-900/80 border-slate-800'
-                  : isDuvida
-                  ? 'bg-amber-500/8 border-amber-500/30 shadow-lg shadow-amber-500/5'
-                  : 'bg-red-500/8 border-red-500/30 shadow-lg shadow-red-500/5'
+                  : 'bg-amber-500/8 border-amber-500/30 shadow-lg shadow-amber-500/5'
               }`}
             >
               <div className="flex items-center justify-between flex-wrap gap-2">
@@ -103,14 +116,10 @@ export default function TelaConfirmacaoCesta({
                   <span className="text-xs font-mono font-bold text-slate-500">#{idx + 1}</span>
                   <span
                     className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      isOk
-                        ? 'bg-emerald-500/20 text-emerald-300'
-                        : isDuvida
-                        ? 'bg-amber-500/20 text-amber-300'
-                        : 'bg-red-500/20 text-red-300'
+                      isOk ? 'bg-emerald-500/20 text-emerald-300' : 'bg-amber-500/20 text-amber-300'
                     }`}
                   >
-                    {isOk ? '🟢 Confirmado' : isDuvida ? '🟡 Atenção Necessária' : '🔴 Nome Obrigatório'}
+                    {isOk ? '🟢 Confirmado' : '🟡 Revisão Recomendada'}
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono">
                     ({item.origemColhedor === 'colhedor01_prontuario' ? 'Prontuário' : 'WhatsApp/Direct'})
@@ -127,19 +136,11 @@ export default function TelaConfirmacaoCesta({
                 </button>
               </div>
 
-              {/* Mensagem de Ajuda Humana */}
-              {item.mensagemAjuda && !isOk && (
-                <div className="p-2.5 rounded-xl bg-black/40 text-xs text-amber-300 font-semibold border border-amber-500/20 flex items-center gap-2">
-                  <HelpCircle className="h-4 w-4 flex-none" />
-                  {item.mensagemAjuda}
-                </div>
-              )}
-
-              {/* Campos Editáveis */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              {/* Campos Editáveis Enxutos: Nome + Valor Pago */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                    Nome da Pessoa / Contato:
+                    Nome do Paciente:
                   </label>
                   <input
                     type="text"
@@ -152,7 +153,7 @@ export default function TelaConfirmacaoCesta({
 
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                    Valor Pago / Orçamento (R$):
+                    Ticket Pago (R$):
                   </label>
                   <input
                     type="number"
@@ -161,20 +162,6 @@ export default function TelaConfirmacaoCesta({
                     placeholder="Ex: 450"
                     className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-emerald-400 font-bold font-mono focus:border-emerald-500"
                   />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                    Status de Fechamento:
-                  </label>
-                  <select
-                    value={item.statusFechamento || 'sim'}
-                    onChange={(e) => handleUpdateItem(item.id, { statusFechamento: e.target.value as any })}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 font-semibold focus:border-indigo-500"
-                  >
-                    <option value="sim">Fechou Consultoria / Paciente ✓</option>
-                    <option value="nao">Não Fechou / Ghosting ✕</option>
-                  </select>
                 </div>
               </div>
             </div>

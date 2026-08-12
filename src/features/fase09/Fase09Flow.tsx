@@ -163,102 +163,56 @@ export default function Fase09Flow({ uid, clientRecord }: Fase09FlowProps) {
 
   return (
     <div className="w-full py-4 px-4 space-y-6">
-      {/* Seletor de Modo de Exibição (Modo Consultor Tela Única vs Modo Guiado) */}
-      <div className="w-full max-w-5xl mx-auto flex items-center justify-between bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-2 text-xs">
-        <span className="text-slate-400 font-medium flex items-center gap-1.5">
-          <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-          Modo de Visualização do Simulador Eixo 09:
-        </span>
+      <div className="w-full">
+        {step !== 'tela1' && (
+          <div className="w-full max-w-2xl mx-auto mb-4">
+            <button
+              type="button"
+              id="btn_eixo09_voltar"
+              onClick={handleVoltar}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Voltar aos Passos
+            </button>
+          </div>
+        )}
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setModoExibicao('mestre_consultor')}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              modoExibicao === 'mestre_consultor'
-                ? 'bg-indigo-600 text-white shadow'
-                : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            ⚡ Modo Consultor (Tela Única)
-          </button>
+        {step === 'tela1' && (
+          <Tela1NumeroMagico
+            contexto={contexto}
+            premissas={premissas}
+            initialNumeroMagico={simuladorState.numeroMagico}
+            initialTetoSemana={simuladorState.tetoSemanaPerfeita}
+            onAvancar={handleTela1Avancar}
+          />
+        )}
 
-          <button
-            type="button"
-            onClick={() => setModoExibicao('guiado')}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              modoExibicao === 'guiado'
-                ? 'bg-indigo-600 text-white shadow'
-                : 'bg-slate-950 border border-slate-800 text-slate-400 hover:text-white'
-            }`}
-          >
-            <Compass className="h-3.5 w-3.5" />
-            🧙‍♂️ Modo Guiado (Passo a Passo)
-          </button>
-        </div>
+        {step === 'tela2' && (
+          <Tela2FormaRecebimento
+            premissas={premissas}
+            initialFormaRecebimento={simuladorState.formaRecebimento}
+            onAvancar={handleTela2Avancar}
+          />
+        )}
+
+        {step === 'tela3' && (
+          <Tela3EscolhaCaminho
+            baseAtivosAtual={contexto.baseAtivosAtual}
+            initialEscolhaCaminho={simuladorState.escolhaCaminho}
+            onAvancar={handleTela3Avancar}
+          />
+        )}
+
+        {step === 'simulador' && (
+          <SimuladorCardsFlow
+            uid={uid}
+            contexto={contexto}
+            initialState={simuladorState}
+            onSalvarPremissas={handleSalvarPremissas}
+          />
+        )}
       </div>
-
-      {/* RENDER DO MODO CONSULTOR TELA ÚNICA */}
-      {modoExibicao === 'mestre_consultor' ? (
-        <FormularioMestreConsultor
-          uid={uid}
-          contexto={contexto}
-          initialState={simuladorState}
-        />
-      ) : (
-        /* RENDER DO MODO GUIADO PASSO A PASSO */
-        <div className="w-full">
-          {step !== 'tela1' && (
-            <div className="w-full max-w-2xl mx-auto mb-4">
-              <button
-                type="button"
-                id="btn_eixo09_voltar"
-                onClick={handleVoltar}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                Voltar
-              </button>
-            </div>
-          )}
-
-          {step === 'tela1' && (
-            <Tela1NumeroMagico
-              contexto={contexto}
-              premissas={premissas}
-              initialNumeroMagico={simuladorState.numeroMagico}
-              initialTetoSemana={simuladorState.tetoSemanaPerfeita}
-              onAvancar={handleTela1Avancar}
-            />
-          )}
-
-          {step === 'tela2' && (
-            <Tela2FormaRecebimento
-              premissas={premissas}
-              initialFormaRecebimento={simuladorState.formaRecebimento}
-              onAvancar={handleTela2Avancar}
-            />
-          )}
-
-          {step === 'tela3' && (
-            <Tela3EscolhaCaminho
-              baseAtivosAtual={contexto.baseAtivosAtual}
-              initialEscolhaCaminho={simuladorState.escolhaCaminho}
-              onAvancar={handleTela3Avancar}
-            />
-          )}
-
-          {step === 'simulador' && (
-            <SimuladorCardsFlow
-              uid={uid}
-              contexto={contexto}
-              initialState={simuladorState}
-              onSalvarPremissas={handleSalvarPremissas}
-            />
-          )}
-        </div>
-      )}
     </div>
   );
 }

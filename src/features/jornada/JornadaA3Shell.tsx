@@ -114,6 +114,7 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
   const [modoLivre, setModoLivre] = useState(true); // ATIVADO POR PADRÃO CONFORME SOLICITADO
   const [mostrarResumoUnificado, setMostrarResumoUnificado] = useState(false);
   const [mostrarCrmBridge, setMostrarCrmBridge] = useState(false);
+  const [menuEixosAberto, setMenuEixosAberto] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -144,6 +145,7 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
       setMostrarResumoUnificado(false);
       setMostrarCrmBridge(false);
       setFaseFocada(etapa.id);
+      setMenuEixosAberto(false);
     },
     []
   );
@@ -167,14 +169,16 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
   }
 
   const etapaFocada = etapas.find((e) => e.id === faseFocada) ?? etapas[0];
+  const isEixo01Ativo = faseFocada === 'fase01_promessa_metodo' && !mostrarResumoUnificado && !mostrarCrmBridge;
 
   return (
     <div className="space-y-6">
-      {/* BARRA DE PROGRESSO HORIZONTAL — LINHA DO TEMPO */}
-      <div
-        className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl px-4 pt-3 pb-4 space-y-3"
-        id="jornada_barra_progresso"
-      >
+      {/* BARRA DE PROGRESSO HORIZONTAL — LINHA DO TEMPO (Exibida normalmente nos Eixos 02 a 09 ou quando menu secundário estiver aberto) */}
+      {(!isEixo01Ativo || menuEixosAberto) && (
+        <div
+          className="bg-white/5 border border-white/10 backdrop-blur-xl rounded-2xl px-4 pt-3 pb-4 space-y-3 animate-fadeIn"
+          id="jornada_barra_progresso"
+        >
         {/* Título e Toggle Modo Livre */}
         <div className="flex items-center justify-between">
           <div>
@@ -281,6 +285,7 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
           })}
         </div>
       </div>
+      )}
 
       {/* CONTEÚDO DA FASE EM FOCO */}
       <div id="jornada_conteudo_fase">
@@ -294,7 +299,13 @@ export default function JornadaA3Shell({ uid, clientRecord }: JornadaA3ShellProp
             }}
           />
         ) : faseFocada === 'fase01_promessa_metodo' ? (
-          <Fase01Flow uid={uid} initialState={clientRecord?.fase01 ?? null} />
+          <Fase01Flow
+            uid={uid}
+            initialState={clientRecord?.fase01 ?? null}
+            onAvancarFase02={() => setFaseFocada('fase02_captacao')}
+            onToggleMenuEixos={() => setMenuEixosAberto((prev) => !prev)}
+            menuEixosAberto={menuEixosAberto}
+          />
         ) : faseFocada === 'fase02_captacao' ? (
           <Fase02Flow
             key="fase02"

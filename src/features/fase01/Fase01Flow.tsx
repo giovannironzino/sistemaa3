@@ -1,6 +1,5 @@
 // Fase01Flow.tsx
-// Orquestrador do fluxo da Fase 01 — Promessa & Método (A Experiência Viva de Mapeamento).
-// Máquina de estados que gerencia a navegação entre a Central de Mapeamento, a escolha do Método e a Revelação Final.
+// Orquestrador do fluxo do Eixo 01 — Promessa & Método (Progressive Disclosure em 4 Etapas).
 
 import React, { useState, useCallback } from 'react';
 import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
@@ -15,16 +14,13 @@ import {
 } from './fase01.types';
 import { CLUSTERS } from './data/bancoDePromessas';
 
-import { ArrowLeft } from 'lucide-react';
+import Eixo01HeaderCompacto from './components/Eixo01HeaderCompacto';
+import Eixo01Step1Pacientes from './telas/Eixo01Step1Pacientes';
+import Eixo01Step2Padroes from './telas/Eixo01Step2Padroes';
+import Eixo01Step3Metodo from './telas/Eixo01Step3Metodo';
+import Eixo01Step4Promessa from './telas/Eixo01Step4Promessa';
 
-import Tela06CentralMapeamento from './telas/Tela06CentralMapeamento';
-import Tela5Metodo from './telas/Tela5Metodo';
-import TelaFinalResumo from './telas/TelaFinalResumo';
-
-type FlowStep =
-  | { screen: 'tela_mapeamento' }
-  | { screen: 'tela5' }
-  | { screen: 'tela_final' };
+export type Eixo01LocalStep = 'pacientes' | 'padroes' | 'metodo' | 'promessa';
 
 function buildInitialState(): Fase01State {
   return {
@@ -57,30 +53,28 @@ async function persistirFase01(uid: string, state: Fase01State): Promise<void> {
 interface Fase01FlowProps {
   uid: string;
   initialState?: Fase01State | null;
+  onAvancarFase02?: () => void;
+  onToggleMenuEixos?: () => void;
+  menuEixosAberto?: boolean;
 }
 
-export default function Fase01Flow({ uid, initialState }: Fase01FlowProps) {
+export default function Fase01Flow({
+  uid,
+  initialState,
+  onAvancarFase02,
+  onToggleMenuEixos,
+  menuEixosAberto,
+}: Fase01FlowProps) {
   const [state, setStateRaw] = useState<Fase01State>(
     () => initialState ?? buildInitialState()
   );
-  const [step, setStep] = useState<FlowStep>(() =>
-    initialState?.fase01Completa ? { screen: 'tela_final' } : { screen: 'tela_mapeamento' }
+
+  // Estado estritamente de UI local (não persisto no Firestore)
+  const [localStep, setLocalStep] = useState<Eixo01LocalStep>(() =>
+    initialState?.fase01Completa && initialState.pacientesMapeados?.length > 0
+      ? 'promessa'
+      : 'pacientes'
   );
-
-  const [history, setHistory] = useState<FlowStep[]>([]);
-
-  function goToStep(next: FlowStep) {
-    setHistory((prev) => [...prev, step]);
-    setStep(next);
-  }
-
-  function handleVoltar() {
-    setHistory((prev) => {
-      if (prev.length === 0) return prev;
-      setStep(prev[prev.length - 1]);
-      return prev.slice(0, -1);
-    });
-  }
 
   const setState = useCallback(
     (updater: (prev: Fase01State) => Fase01State) => {
@@ -93,15 +87,13 @@ export default function Fase01Flow({ uid, initialState }: Fase01FlowProps) {
     [uid]
   );
 
-  // Handlers
-  function handleMapeamentoAvancar(
-    pacientes: PacienteMapeadoEixo01[],
-    extra?: { nomeConsultorio?: string; softwareCrmUtilizado?: string; totalPacientesAtivosVigentes?: number }
-  ) {
-    // Apuração dos volumes por cluster e dor mais frequente
+  // Recálculo seguro de clusters e volumes preservando regra de negócio existente
+  const recalcularEixo01 = (pacientes: PacienteMapeadoEixo01[]) => {
     const contagem: Record<string, number> = {};
     pacientes.forEach((p) => {
-      contagem[p.dorId] = (contagem[p.dorId] || 0) + 1;
+      if (p.dorId) {
+        contagem[p.dorId] = (contagem[p.dorId] || 0) + 1;
+      }
     });
 
     const volumes: VolumePorCluster[] = CLUSTERS.map((c) => ({
@@ -115,79 +107,190 @@ export default function Fase01Flow({ uid, initialState }: Fase01FlowProps) {
 
     const publicoAlvoFinal = qualificados[0] || 'estetica_emagrecimento';
 
+    return { volumes, clustersQualificados: qualificados, publicoAlvoFinal };
+  };
+
+  const normalizarNome = (nome: string) =>
+    nome.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // Handlers
+  const handleSalvarPaciente = (paciente: PacienteMapeadoEixo01) => {
+    setState((prev) => {
+      const atuais = prev.pacientesMapeados || [];
+      const normNovo = normalizarNome(paciente.nome);
+
+      const indexExistente = atuais.findIndex(
+        (p) => p.id === paciente.id || normalizarNome(p.nome) === normNovo
+      );
+
+      let novosPacientes: PacienteMapeadoEixo01[];
+      if (indexExistente >= 0) {
+        novosPacientes = [...atuais];
+        novosPacientes[indexExistente] = {
+          ...novosPacientes[indexExistente],
+          ...paciente,
+          id: novosPacientes[indexExistente].id, // preserva ID original
+        };
+      } else {
+        novosPacientes = [...atuais, paciente];
+      }
+
+      const recalculo = recalcularEixo01(novosPacientes);
+      return {
+        ...prev,
+        pacientesMapeados: novosPacientes,
+        ...recalculo,
+      };
+    });
+  };
+
+  const handleImportarPacientesEmLote = (novosPacientesImportados: PacienteMapeadoEixo01[]) => {
+    setState((prev) => {
+      const atuais = [...(prev.pacientesMapeados || [])];
+
+      novosPacientesImportados.forEach((itemNovo) => {
+        const normNovo = normalizarNome(itemNovo.nome);
+        const idxExistente = atuais.findIndex(
+          (p) => p.id === itemNovo.id || normalizarNome(p.nome) === normNovo
+        );
+
+        if (idxExistente >= 0) {
+          atuais[idxExistente] = {
+            ...atuais[idxExistente],
+            dorId: itemNovo.dorId || atuais[idxExistente].dorId,
+            ticketPagoEstimado: itemNovo.ticketPagoEstimado || atuais[idxExistente].ticketPagoEstimado,
+            mesAtendimento: itemNovo.mesAtendimento || atuais[idxExistente].mesAtendimento,
+          };
+        } else {
+          atuais.push(itemNovo);
+        }
+      });
+
+      const recalculo = recalcularEixo01(atuais);
+      return {
+        ...prev,
+        pacientesMapeados: atuais,
+        ...recalculo,
+      };
+    });
+  };
+
+  const handleExcluirPaciente = (id: string) => {
+    setState((prev) => {
+      const novosPacientes = (prev.pacientesMapeados || []).filter((p) => p.id !== id);
+      const recalculo = recalcularEixo01(novosPacientes);
+      return {
+        ...prev,
+        pacientesMapeados: novosPacientes,
+        ...recalculo,
+      };
+    });
+  };
+
+  const handleExcluirPacientesEmLote = (ids: string[]) => {
+    setState((prev) => {
+      const setIds = new Set(ids);
+      const novosPacientes = (prev.pacientesMapeados || []).filter((p) => !setIds.has(p.id));
+      const recalculo = recalcularEixo01(novosPacientes);
+      return {
+        ...prev,
+        pacientesMapeados: novosPacientes,
+        ...recalculo,
+      };
+    });
+  };
+
+  const handleRestaurarPacientes = (pacientesRestaurar: PacienteMapeadoEixo01[]) => {
+    setState((prev) => {
+      const atuais = prev.pacientesMapeados || [];
+      const mapaIds = new Set(atuais.map((p) => p.id));
+      const aAdicionar = pacientesRestaurar.filter((p) => !mapaIds.has(p.id));
+      const novosPacientes = [...atuais, ...aAdicionar];
+      const recalculo = recalcularEixo01(novosPacientes);
+      return {
+        ...prev,
+        pacientesMapeados: novosPacientes,
+        ...recalculo,
+      };
+    });
+  };
+
+  const handleConfirmarMetodo = (metodoId: MetodoId) => {
     setState((prev) => ({
       ...prev,
-      pacientesMapeados: pacientes,
-      volumes,
-      clustersQualificados: qualificados,
-      publicoAlvoFinal,
-      nomeConsultorio: extra?.nomeConsultorio ?? prev.nomeConsultorio,
-      softwareCrmUtilizado: extra?.softwareCrmUtilizado ?? prev.softwareCrmUtilizado,
-      totalPacientesAtivosVigentes: extra?.totalPacientesAtivosVigentes ?? prev.totalPacientesAtivosVigentes,
+      metodoSelecionado: metodoId,
     }));
+    setLocalStep('promessa');
+  };
 
-    goToStep({ screen: 'tela5' });
-  }
+  const handleConcluirEixo = () => {
+    setState((prev) => ({
+      ...prev,
+      fase01Completa: true,
+    }));
+    if (onAvancarFase02) {
+      onAvancarFase02();
+    }
+  };
 
-  function handleTela5Escolher(metodoId: MetodoId) {
-    setState((prev) => ({ ...prev, metodoSelecionado: metodoId }));
-    goToStep({ screen: 'tela_final' });
-  }
-
-  function handleFinalComplete() {
-    setState((prev) => ({ ...prev, fase01Completa: true }));
-  }
-
-  function handleRevisar() {
-    setHistory([]);
-    setStep({ screen: 'tela_mapeamento' });
-  }
+  const getStepIndex = (): number => {
+    switch (localStep) {
+      case 'pacientes': return 0;
+      case 'padroes': return 1;
+      case 'metodo': return 2;
+      case 'promessa': return 3;
+      default: return 0;
+    }
+  };
 
   return (
-    <div className="w-full py-8 px-4">
-      {history.length > 0 && (
-        <div className="w-full max-w-6xl mx-auto mb-4">
-          <button
-            type="button"
-            onClick={handleVoltar}
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-            Voltar
-          </button>
-        </div>
-      )}
+    <div className="w-full space-y-6">
+      {/* Cabeçalho Compacto Exclusivo do Eixo 01 */}
+      <Eixo01HeaderCompacto
+        currentStepIndex={getStepIndex()}
+        totalSteps={4}
+        onToggleMenuEixos={onToggleMenuEixos}
+        menuEixosAberto={menuEixosAberto}
+      />
 
-      {step.screen === 'tela_mapeamento' && (
-        <Tela06CentralMapeamento
-          pacientesIniciais={state.pacientesMapeados ?? []}
-          nomeConsultorioInicial={state.nomeConsultorio}
-          softwareCrmInicial={state.softwareCrmUtilizado}
-          totalPacientesAtivosInicial={state.totalPacientesAtivosVigentes}
-          onAvancar={handleMapeamentoAvancar}
+      {/* Renderização da Etapa Ativa */}
+      {localStep === 'pacientes' && (
+        <Eixo01Step1Pacientes
+          pacientes={state.pacientesMapeados || []}
+          onSalvarPaciente={handleSalvarPaciente}
+          onImportarEmLote={handleImportarPacientesEmLote}
+          onExcluirPaciente={handleExcluirPaciente}
+          onExcluirEmLote={handleExcluirPacientesEmLote}
+          onRestaurarPacientes={handleRestaurarPacientes}
+          onAvancarParaPadroes={() => setLocalStep('padroes')}
         />
       )}
 
-      {step.screen === 'tela5' && state.publicoAlvoFinal && (
-        <Tela5Metodo
-          publicoAlvoFinal={state.publicoAlvoFinal}
-          promessaSelecionada="Emagrecimento com Saúde e Consistência"
-          onEscolher={handleTela5Escolher}
+      {localStep === 'padroes' && (
+        <Eixo01Step2Padroes
+          pacientes={state.pacientesMapeados || []}
+          onContinuarParaMetodo={() => setLocalStep('metodo')}
+          onRevisarAmostra={() => setLocalStep('pacientes')}
         />
       )}
 
-      {step.screen === 'tela_final' &&
-        state.publicoAlvoFinal &&
-        state.metodoSelecionado && (
-          <TelaFinalResumo
-            publicoAlvoFinal={state.publicoAlvoFinal}
-            promessaSelecionada="Emagrecimento com Saúde e Consistência"
-            metodoSelecionado={state.metodoSelecionado}
-            pacientesMapeados={state.pacientesMapeados}
-            onComplete={handleFinalComplete}
-            onRevisar={handleRevisar}
-          />
-        )}
+      {localStep === 'metodo' && (
+        <Eixo01Step3Metodo
+          pacientes={state.pacientesMapeados || []}
+          metodoSelecionadoInicial={state.metodoSelecionado}
+          onConfirmarMetodo={handleConfirmarMetodo}
+        />
+      )}
+
+      {localStep === 'promessa' && (
+        <Eixo01Step4Promessa
+          pacientes={state.pacientesMapeados || []}
+          metodoSelecionado={state.metodoSelecionado || 'rotina_real'}
+          onConcluirEixo={handleConcluirEixo}
+          onRevisarEixo={() => setLocalStep('pacientes')}
+        />
+      )}
     </div>
   );
 }
+

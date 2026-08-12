@@ -548,6 +548,15 @@ export interface ClientRecord {
   monthlyRituals: MonthlyRitual[];
   calls?: Record<string, CallRecord>;
   activityLog?: ActivityLog[];
+  fase01?: any;
+  fase02?: any;
+  fase03?: any;
+  fase04?: any;
+  fase05?: any;
+  fase06?: any;
+  fase07?: any;
+  fase08?: any;
+  fase09?: any;
 }
 
 // ---------------------------------------------------------------------------

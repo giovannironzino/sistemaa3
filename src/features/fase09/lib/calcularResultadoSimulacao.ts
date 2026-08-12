@@ -164,6 +164,95 @@ export function calcularResultadoSimulacao(
   const bateuNumeroMagico = lucroLiquidoSimulado >= state.numeroMagico;
   const respeitouTetoSemanaPerfeita = cargaHorariaSemanalExigida <= state.tetoSemanaPerfeita;
 
+  // --- CÁLCULO DO SCORE DE EXEQUIBILIDADE A3 (0 a 100%) ---
+  // Subscore Financeiro (40% do peso)
+  let subscoreFin = 0;
+  if (state.numeroMagico > 0) {
+    const ratioLucro = lucroLiquidoSimulado / state.numeroMagico;
+    subscoreFin = Math.min(100, Math.max(0, ratioLucro * 100));
+  } else {
+    subscoreFin = 100;
+  }
+
+  // Subscore Operacional de Agenda (35% do peso)
+  let subscoreOper = 100;
+  if (state.tetoSemanaPerfeita > 0) {
+    if (cargaHorariaSemanalExigida <= state.tetoSemanaPerfeita) {
+      subscoreOper = 100;
+    } else {
+      const excessoRatio = (cargaHorariaSemanalExigida - state.tetoSemanaPerfeita) / state.tetoSemanaPerfeita;
+      subscoreOper = Math.max(0, 100 - excessoRatio * 100);
+    }
+  }
+
+  // Subscore Comercial de Leads (25% do peso)
+  let subscoreCom = 100;
+  const leadsHistoricos = contexto.leadsMensaisMedia || 10;
+  if (leadsNecessariosMes > leadsHistoricos) {
+    const aumentoVezes = leadsNecessariosMes / leadsHistoricos;
+    if (aumentoVezes <= 1.5) subscoreCom = 90;
+    else if (aumentoVezes <= 2.5) subscoreCom = 70;
+    else if (aumentoVezes <= 4.0) subscoreCom = 45;
+    else subscoreCom = 20;
+  }
+
+  const scoreExequibilidadeA3 = Math.round(
+    subscoreFin * 0.40 + subscoreOper * 0.35 + subscoreCom * 0.25
+  );
+
+  let classificacaoExequibilidade: 'Alta Viabilidade' | 'Esforço Moderado' | 'Desafio Elevado' | 'Risco de Exaustão';
+  let explicacaoSimplesExequibilidade = '';
+
+  if (scoreExequibilidadeA3 >= 85) {
+    classificacaoExequibilidade = 'Alta Viabilidade';
+    explicacaoSimplesExequibilidade = 'Meta plenamente atingível dentro da sua rotina atual de trabalho e capacidade comercial.';
+  } else if (scoreExequibilidadeA3 >= 65) {
+    classificacaoExequibilidade = 'Esforço Moderado';
+    explicacaoSimplesExequibilidade = 'Cenário equilibrado. Exigirá constância comercial, mas sem sobrecarregar sua agenda.';
+  } else if (scoreExequibilidadeA3 >= 45) {
+    classificacaoExequibilidade = 'Desafio Elevado';
+    explicacaoSimplesExequibilidade = 'Exige alto volume de novos contatos ou ajuste de preços para não estourar suas horas livres.';
+  } else {
+    classificacaoExequibilidade = 'Risco de Exaustão';
+    explicacaoSimplesExequibilidade = 'Alerta de sobrecarga: a carga horária ou a meta de novos leads supera sua capacidade física sem equipe de apoio.';
+  }
+
+  // --- CÁLCULO DA CURVA DE MARCOS MENSAIS PROGRESSIVOS (RAMP-UP SE SELECIONADO UM PERÍODO) ---
+  const prazo = state.prazoMeses || 1;
+  const marcosMensais: Array<{ mes: number; lucroEstimado: number; novosPacientesAcumulados: number; leadsSemanaExigidos: number }> = [];
+
+  const deltaLucro = lucroLiquidoSimulado - contexto.lucroLiquidoReal;
+
+  for (let m = 1; m <= prazo; m++) {
+    const fatorCrescimento = prazo === 1 ? 1 : m / prazo;
+    const lucroEstimado = Math.round(contexto.lucroLiquidoReal + deltaLucro * fatorCrescimento);
+    const novosPacientesAcumulados = Math.round((novosPacientesTotal || 0) * fatorCrescimento);
+    const leadsSemanaExigidos = Math.ceil((leadsNecessariosMes / 4.33) * fatorCrescimento);
+
+    marcosMensais.push({
+      mes: m,
+      lucroEstimado,
+      novosPacientesAcumulados,
+      leadsSemanaExigidos,
+    });
+  }
+
+  // --- NARRATIVA DE MATERIALIZAÇÃO DO SONHO ---
+  const deltaLucroMes = lucroLiquidoSimulado - contexto.lucroLiquidoReal;
+  const deltaLucroPrazo = deltaLucroMes * prazo;
+
+  let narrativaMaterializacaoSonho = '';
+  if (deltaLucroMes > 0) {
+    narrativaMaterializacaoSonho = `Ao realizar esta meta em ${prazo} ${prazo === 1 ? 'mês' : 'meses'}, você coloca R$ ${deltaLucroMes.toLocaleString('pt-BR')} limpos a mais no bolso todos os meses (somando +R$ ${deltaLucroPrazo.toLocaleString('pt-BR')} extras no período). ` +
+      (respeitouTetoSemanaPerfeita
+        ? `O melhor: você faz isso cumprindo ${cargaHorariaSemanalExigida}h/semana (dentro do seu teto de ${state.tetoSemanaPerfeita}h), garantindo previsibilidade financeira para reinvestir, estabilidade e mais tempo livre com quem você ama.`
+        : `Atenção: A carga exigida de ${cargaHorariaSemanalExigida}h/semana excede o seu teto confortável de ${state.tetoSemanaPerfeita}h. Sugerimos delegar apoio operacional ou reajustar o valor dos programas para proteger sua saúde e liberdade.`);
+  } else if (deltaLucroMes === 0) {
+    narrativaMaterializacaoSonho = `Sua simulação mantém a estabilidade atual de R$ ${lucroLiquidoSimulado.toLocaleString('pt-BR')}/mês limpos com carga horária de ${cargaHorariaSemanalExigida}h/semana.`;
+  } else {
+    narrativaMaterializacaoSonho = `Atenção: Este cenário reduz a sobra limpa em R$ ${Math.abs(deltaLucroMes).toLocaleString('pt-BR')}/mês. Ajuste os valores dos programas ou a captação para transformar a projeção em lucro positivo.`;
+  }
+
   return {
     receitaSimuladaMensal,
     horasSimuladasMensais,
@@ -174,5 +263,10 @@ export function calcularResultadoSimulacao(
     lucroLiquidoSimulado,
     bateuNumeroMagico,
     respeitouTetoSemanaPerfeita,
+    scoreExequibilidadeA3,
+    classificacaoExequibilidade,
+    explicacaoSimplesExequibilidade,
+    narrativaMaterializacaoSonho,
+    marcosMensais,
   };
 }

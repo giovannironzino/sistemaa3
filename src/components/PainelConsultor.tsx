@@ -4,6 +4,8 @@ import { streamConsultantClients, updateClientProfile, saveConsultantComments, s
 import { DEFAULT_EIXOS_SCHEMA } from '../lib/initialData';
 import GestaoCliente from './GestaoCliente';
 import EditorDePerguntas from './EditorDePerguntas';
+import FormularioMestreConsultor from '../features/fase09/telas/FormularioMestreConsultor';
+import { obterContextoFasesAnteriores } from '../features/fase09/lib/obterContextoFasesAnteriores';
 
 interface PainelConsultorProps {
   consultorId: string;
@@ -263,39 +265,67 @@ export default function PainelConsultor({ consultorId, consultorName }: PainelCo
           )}
 
           {activeTab === 'simulacao' && (
-            <div className="max-w-4xl space-y-6">
-              <h3 className="font-bold text-base text-white">Simulação de Cenários Estratégicos</h3>
-              <p className="text-xs text-slate-400">Ajuste os parâmetros para projetar o faturamento e a ocupação da agenda.</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {[
-                  { name: 'Cenário Conservador', fat: 20000, cap: 60, breakEven: 12000 },
-                  { name: 'Cenário Moderado', fat: 28000, cap: 80, breakEven: 12000, isOfficial: true },
-                  { name: 'Cenário Acelerado', fat: 35000, cap: 95, breakEven: 12000 },
-                ].map((sc, i) => (
-                  <div key={i} className="card-glass p-5 flex flex-col justify-between space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-sm text-white">{sc.name}</span>
-                      {sc.isOfficial && <span className="status-success text-[10px] px-2 py-0.5 font-bold">Oficial</span>}
-                    </div>
-                    <div className="space-y-2">
-                      <div className="text-[10px] text-slate-400 uppercase">Faturamento Esperado</div>
-                      <div className="text-xl font-extrabold text-indigo-300">R$ {sc.fat.toLocaleString('pt-BR')}</div>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-400">Agenda</span>
-                        <span className="font-bold text-white">{sc.cap}%</span>
-                      </div>
-                      <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-indigo-500 h-full" style={{ width: `${sc.cap}%` }} />
-                      </div>
-                    </div>
-                    <button type="button" className="btn-primary w-full py-2 text-xs">
-                      Aprovar Cenário
-                    </button>
-                  </div>
-                ))}
-              </div>
+            <div className="w-full">
+              {activeClientRecord ? (
+                <FormularioMestreConsultor
+                  uid={activeClientId}
+                  contexto={obterContextoFasesAnteriores(activeClientRecord)}
+                  initialState={activeClientRecord?.fase09?.simulacaoAtiva?.estado || activeClientRecord?.fase09 || {
+                    numeroMagico: 10000,
+                    limitePreAprovado: 10000,
+                    tetoSemanaPerfeita: 40,
+                    formaRecebimento: 'antecipado',
+                    escolhaCaminho: null,
+                    card1Ativo: true,
+                    novosPacientesQuantidade: 5,
+                    novosPacientesPreset: 'foco_carro_chefe',
+                    novosPacientesDistribuicao: [],
+                    card1BAtivo: false,
+                    indicacaoQuantidade: 0,
+                    card2Ativo: false,
+                    reajusteValorReais: 50,
+                    taxaSaidaEsperadaPercentual: 0,
+                    card3Ativo: false,
+                    planoOrigemServicoId: null,
+                    planoDestinoServicoId: null,
+                    quantidadeMigrar: 0,
+                    card4ALinha1Ativa: false,
+                    card4ALinha1TaxaAceitacaoPercentual: 0,
+                    card4ALinha2Ativa: false,
+                    card4ALinha2PacientesDeAltaQuantidade: 0,
+                    card4ALinha2TaxaAceitacaoPercentual: 0,
+                    card4BAtivo: false,
+                    card4BOfertas: [],
+                    card5ApoioOperacionalAtivo: false,
+                    card5ApoioComercialAtivo: false,
+                    card5ApoioGestaoAtivo: false,
+                    card5MelhoraConversaoPercentual: 10,
+                    card5CustoOperacionalReais: 1800,
+                    card5CustoComercialReais: 2000,
+                    card5CustoGestaoReais: 1500,
+                    card5HorasAbsorvidasOperacional: 30,
+                    card5HorasAbsorvidasGestaoPropria: 20,
+                    card5HorasGestaoDaEquipe: 5,
+                    card6Ativo: false,
+                    quantidadeResgatar: 0,
+                    taxaSucessoPercentual: 0,
+                    premissas: {
+                      minutosPacienteNovo: 90,
+                      minutosPacienteAtivo: 45,
+                      impostosPercentual: 6,
+                      taxaCartaoPercentual: 3,
+                      taxaAntecipacaoPercentual: 2,
+                      totalPacientesInativos: 10,
+                      temComunidadeAtiva: false,
+                      atualizadoEm: new Date().toISOString(),
+                    },
+                  }}
+                />
+              ) : (
+                <div className="p-8 text-center text-slate-400 text-sm">
+                  Selecione um cliente no menu à esquerda para visualizar e editar o Formulário Mestre de Simulação.
+                </div>
+              )}
             </div>
           )}
 

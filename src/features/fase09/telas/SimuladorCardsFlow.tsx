@@ -43,6 +43,7 @@ import {
   alternarFavoritaSimulacao,
 } from '../lib/eixo09Service';
 import { obterDatasA3 } from '../../../lib/dateUtils';
+import GavetaAplicarMetas from './GavetaAplicarMetas';
 
 interface SimuladorCardsFlowProps {
   uid: string;
@@ -64,6 +65,22 @@ export default function SimuladorCardsFlow({
   const [nomeCustomSimulacao, setNomeCustomSimulacao] = useState('');
   const [feedbackMensagem, setFeedbackMensagem] = useState<string | null>(null);
   const [modalHistoricoAberto, setModalHistoricoAberto] = useState(false);
+  const [gavetaAplicarAberta, setGavetaAplicarAberta] = useState(false);
+  const [blocoFocado, setBlocoFocado] = useState<'dinheiro' | 'clientes' | 'preco' | 'tempo' | null>(null);
+
+  // Visualização Híbrida (Sintética / Analítica) das Colunas 1 e 3
+  const [modoColuna1, setModoColuna1] = useState<'sintetico' | 'analitico'>('sintetico');
+  const [modoColuna3, setModoColuna3] = useState<'sintetico' | 'analitico'>('sintetico');
+  const [expandidosColuna1, setExpandidosColuna1] = useState<Record<string, boolean>>({});
+  const [expandidosColuna3, setExpandidosColuna3] = useState<Record<string, boolean>>({});
+
+  const toggleExpandido1 = (key: string) => {
+    setExpandidosColuna1((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const toggleExpandido3 = (key: string) => {
+    setExpandidosColuna3((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   // Recarrega simulações salvas ao abrir o componente
   React.useEffect(() => {
@@ -223,211 +240,410 @@ export default function SimuladorCardsFlow({
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-8" id="mesa_controle_viva">
-      {/* ---------------------------------------------------------------- */}
-      {/* ATALHOS DE CENÁRIOS PRONTOS COM 1 CLIQUE                         */}
-      {/* ---------------------------------------------------------------- */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 font-label flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5" /> Cenários Prontos com 1 Clique
-          </span>
-          <span className="text-[10px] text-slate-500">Escolha um atalho para preencher os controles automaticamente</span>
+    <div className="w-full max-w-7xl mx-auto h-[calc(100vh-6rem)] flex flex-col gap-4 overflow-hidden p-1" id="mesa_controle_viva">
+      {/* feedback message toast */}
+      {feedbackMensagem && (
+        <div className="shrink-0 p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold shadow-lg flex items-center justify-between animate-fadeIn">
+          <span>{feedbackMensagem}</span>
+          <button onClick={() => setFeedbackMensagem(null)} className="text-emerald-400 hover:text-white">✕</button>
         </div>
+      )}
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <button
-            type="button"
-            onClick={handleAplicarCenarioConservador}
-            className="p-3.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-left hover:bg-emerald-500/20 transition-all cursor-pointer space-y-1"
-          >
-            <div className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-              🟢 Conservador
-            </div>
-            <p className="text-[11px] text-slate-300 leading-snug">
-              Melhora conversão do WhatsApp e resgata pacientes sumidos com R$ 0 em anúncios.
-            </p>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleAplicarCenarioModerado}
-            className="p-3.5 rounded-xl border border-blue-500/30 bg-blue-500/10 text-left hover:bg-blue-500/20 transition-all cursor-pointer space-y-1"
-          >
-            <div className="text-xs font-bold text-blue-400 flex items-center gap-1.5">
-              🔵 Moderado
-            </div>
-            <p className="text-[11px] text-slate-300 leading-snug">
-              Reajuste suave de R$ 50 no valor da consulta e migração de 20% da base para planos longos.
-            </p>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleAplicarCenarioArrojado}
-            className="p-3.5 rounded-xl border border-purple-500/30 bg-purple-500/10 text-left hover:bg-purple-500/20 transition-all cursor-pointer space-y-1"
-          >
-            <div className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
-              🚀 Arrojado
-            </div>
-            <p className="text-[11px] text-slate-300 leading-snug">
-              Contrata assistente para liberar 15h de agenda e acelera a venda do produto High-Ticket.
-            </p>
-          </button>
-        </div>
-      </div>
-
-      {/* ---------------------------------------------------------------- */}
-      {/* DASHBOARD DE RESULTADO AO VIVO (PAINEL SUPERIOR)                  */}
-      {/* ---------------------------------------------------------------- */}
-      <div className="bg-slate-900/90 border border-indigo-500/30 rounded-2xl p-6 shadow-2xl backdrop-blur-xl sticky top-4 z-30">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4 mb-4">
+      {/* BANNER DE ATALHOS */}
+      <div className="shrink-0 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-bold text-indigo-400 uppercase tracking-wider font-label">
-              <Sparkles className="h-3 w-3" /> Mesa de Controle Viva
-            </div>
-            <h2 className="text-lg font-bold text-white mt-1">
-              Resultado em Tempo Real
+            <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 font-label flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" /> A3 Command Center (Simulador Eixo 09)
+            </span>
+            <h2 className="text-base font-bold text-white mt-0.5">
+              Mesa de Controle Viva em 3 Colunas Reativas & Metas Financeiras
             </h2>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
-              id="btn_abrir_historico"
               onClick={() => setModalHistoricoAberto(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+              className="px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-slate-300 hover:text-white"
             >
-              <Bookmark className="h-3.5 w-3.5 text-indigo-400" />
+              <Bookmark className="h-3.5 w-3.5 inline mr-1 text-indigo-400" />
               Guardadas ({simulacoesGuardadas.length})
             </button>
-
             <button
               type="button"
-              id="btn_guardar_simulacao"
               onClick={() => setModalGuardarAberto(true)}
-              className="btn-primary inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl"
+              className="px-3.5 py-1.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white"
             >
-              <Bookmark className="h-3.5 w-3.5" />
-              Guardar esta simulação
+              Guardar Simulação
             </button>
           </div>
         </div>
-
-        {/* Feedback Temporário */}
-        {feedbackMensagem && (
-          <div className="mb-4 px-4 py-2.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-xs font-semibold text-emerald-300 flex items-center justify-between animate-fade-in">
-            <span>{feedbackMensagem}</span>
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-          </div>
-        )}
-
-        {/* 2 Indicadores Principais */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Indicador 1: Lucro Limpo */}
-          <div
-            className={`p-4 rounded-xl border transition-all ${
-              resultado.bateuNumeroMagico
-                ? 'bg-emerald-500/10 border-emerald-500/40'
-                : 'bg-red-500/10 border-red-500/30'
-            }`}
-          >
-            <div className="flex items-center justify-between text-xs font-semibold mb-1">
-              <span className="text-slate-300 font-label">Lucro Líquido Simulado</span>
-              <span
-                className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                  resultado.bateuNumeroMagico
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : 'bg-red-500/20 text-red-400'
-                }`}
-              >
-                {resultado.bateuNumeroMagico ? 'Meta Atingida ✓' : 'Abaixo da Meta'}
-              </span>
-            </div>
-            <div className="text-2xl font-black text-white font-mono">
-              R$ {resultado.lucroLiquidoSimulado.toLocaleString('pt-BR')}
-              <span className="text-xs font-normal text-slate-400 ml-1">/mês</span>
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
-              <span>Meta (Número Mágico):</span>
-              <span className="font-bold text-slate-200">
-                R$ {state.numeroMagico.toLocaleString('pt-BR')}
-              </span>
-            </div>
-          </div>
-
-          {/* Indicador 2: Carga Horária */}
-          <div
-            className={`p-4 rounded-xl border transition-all ${
-              resultado.respeitouTetoSemanaPerfeita
-                ? 'bg-emerald-500/10 border-emerald-500/40'
-                : 'bg-red-500/10 border-red-500/30'
-            }`}
-          >
-            <div className="flex items-center justify-between text-xs font-semibold mb-1">
-              <span className="text-slate-300 font-label">Carga Horária Semanal</span>
-              <span
-                className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                  resultado.respeitouTetoSemanaPerfeita
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : 'bg-red-500/20 text-red-400'
-                }`}
-              >
-                {resultado.respeitouTetoSemanaPerfeita ? 'Dentro do Teto ✓' : 'Excede Teto'}
-              </span>
-            </div>
-            <div className="text-2xl font-black text-white font-mono">
-              {resultado.cargaHorariaSemanalExigida}
-              <span className="text-xs font-normal text-slate-400 ml-1">horas / semana</span>
-            </div>
-            <div className="text-[11px] text-slate-400 mt-1 flex items-center justify-between">
-              <span>Teto da Semana Perfeita:</span>
-              <span className="font-bold text-slate-200">{state.tetoSemanaPerfeita} hrs/sem</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Métricas Auxiliares */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-3 border-t border-white/10 text-xs">
-          <div>
-            <span className="text-slate-500 block">Vendas Brutas</span>
-            <span className="font-bold text-slate-200 font-mono">
-              R$ {resultado.receitaSimuladaMensal.toLocaleString('pt-BR')}
-            </span>
-          </div>
-          <div>
-            <span className="text-slate-500 block">Leads Necessários</span>
-            <span className="font-bold text-indigo-300 font-mono">
-              {resultado.leadsNecessariosMes} / mês
-            </span>
-          </div>
-          <div>
-            <span className="text-slate-500 block">Total Pacientes</span>
-            <span className="font-bold text-slate-200 font-mono">
-              {resultado.totalPacientesSimulados}
-            </span>
-          </div>
-          <div>
-            <span className="text-slate-500 block">Custos Entrega + Fixos</span>
-            <span className="font-bold text-slate-400 font-mono">
-              R$ {(resultado.custoEntregaTotalReais + contexto.custosFixosTotais).toLocaleString('pt-BR')}
-            </span>
-          </div>
-        </div>
-
-        <p className="text-[11px] text-slate-400 italic mt-3 text-center">
-          "Esse é o ritmo mensal que, se mantido, sustenta sua meta ao longo dos seus próximos 90 dias."
-        </p>
       </div>
 
       {/* ---------------------------------------------------------------- */}
-      {/* OS 6 CARDS DO SIMULADOR                                          */}
+      {/* ESTRUTURA SAAS FIXA DE 3 COLUNAS COM SCROLL NO MEIO              */}
       {/* ---------------------------------------------------------------- */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 flex-1 min-h-0 overflow-hidden items-stretch">
 
-      {/* ================================================================ */}
-      {/* CARD 1 — Novos Pacientes (Sempre visível)                         */}
-      {/* ================================================================ */}
-      <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-5" id="card1_novos_pacientes">
+        {/* ================================================================ */}
+        {/* COLUNA 1 (ESQUERDA): DIAGNÓSTICO DOS 09 EIXOS (HÍBRIDA SINTÉTICA/ANALÍTICA) */}
+        {/* ================================================================ */}
+        <div className="space-y-3.5 overflow-y-auto pr-1.5 h-full max-h-full scrollbar-thin">
+          <div className="p-3.5 rounded-2xl bg-slate-900/90 border border-white/10 shadow-xl flex items-center justify-between shrink-0">
+            <div>
+              <h3 className="text-xs font-bold text-white flex items-center gap-2">
+                🏢 1. Sua Realidade Hoje
+              </h3>
+              <p className="text-[10px] text-slate-400">
+                Fotografia viva dos 9 Eixos (E01 a E08).
+              </p>
+            </div>
+            <div className="flex bg-black/60 rounded-xl p-0.5 border border-white/10 text-[10px] font-bold">
+              <button
+                type="button"
+                onClick={() => setModoColuna1('sintetico')}
+                className={`px-2.5 py-1 rounded-lg transition-all ${
+                  modoColuna1 === 'sintetico'
+                    ? 'bg-indigo-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Sintética
+              </button>
+              <button
+                type="button"
+                onClick={() => setModoColuna1('analitico')}
+                className={`px-2.5 py-1 rounded-lg transition-all ${
+                  modoColuna1 === 'analitico'
+                    ? 'bg-indigo-600 text-white shadow'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                Analítica
+              </button>
+            </div>
+          </div>
+
+          {/* Card Dinheiro & Sobra Limpa Atual (Eixo 08) */}
+          <div className={`p-4 rounded-xl border transition-all ${
+            blocoFocado === 'dinheiro'
+              ? 'bg-indigo-950/50 border-indigo-500 ring-2 ring-indigo-500/30'
+              : 'bg-white/5 border-white/10'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
+                💰 O Dinheiro Hoje (Eixo 08)
+              </span>
+              <button
+                type="button"
+                onClick={() => toggleExpandido1('dinheiro')}
+                className="text-slate-400 hover:text-white text-[10px] font-semibold flex items-center gap-1"
+              >
+                {expandidosColuna1['dinheiro'] || modoColuna1 === 'analitico' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            </div>
+            <div className="text-xl font-black text-white font-mono mt-1">
+              R$ {contexto.lucroLiquidoReal.toLocaleString('pt-BR')}
+              <span className="text-xs font-normal text-slate-400 ml-1">/mês limpos</span>
+            </div>
+            <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+              Fruto de R$ {contexto.receitaMediaReal.toLocaleString('pt-BR')} de faturamento bruto menos R$ {contexto.custosFixosTotais.toLocaleString('pt-BR')} de despesas fixas.
+            </p>
+
+            {(modoColuna1 === 'analitico' || expandidosColuna1['dinheiro']) && (
+              <div className="mt-3 pt-3 border-t border-white/10 space-y-1.5 text-[11px] text-slate-300 animate-fadeIn">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Receita Média Real (F8):</span>
+                  <span className="font-mono text-white">R$ {contexto.receitaMediaReal.toLocaleString('pt-BR')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Custos Fixos Totais (F8):</span>
+                  <span className="font-mono text-red-300">R$ {contexto.custosFixosTotais.toLocaleString('pt-BR')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Custo de Entrega / Paciente:</span>
+                  <span className="font-mono text-amber-300">R$ {contexto.custoEntregaUnitario}</span>
+                </div>
+                <div className="flex justify-between font-bold pt-1 border-t border-white/5">
+                  <span className="text-emerald-400">Margem Líquida Real:</span>
+                  <span className="font-mono text-emerald-300">
+                    {contexto.receitaMediaReal > 0 ? Math.round((contexto.lucroLiquidoReal / contexto.receitaMediaReal) * 100) : 0}%
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Card Pacientes & Captação Atual (Eixos 01, 02 e 03) */}
+          <div className={`p-4 rounded-xl border transition-all ${
+            blocoFocado === 'clientes'
+              ? 'bg-indigo-950/50 border-indigo-500 ring-2 ring-indigo-500/30'
+              : 'bg-white/5 border-white/10'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block">
+                📢 Clientes & Captação (E01, E02 e E03)
+              </span>
+              <button
+                type="button"
+                onClick={() => toggleExpandido1('clientes')}
+                className="text-slate-400 hover:text-white text-[10px] font-semibold flex items-center gap-1"
+              >
+                {expandidosColuna1['clientes'] || modoColuna1 === 'analitico' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            </div>
+            <div className="text-lg font-extrabold text-white font-mono mt-1">
+              {contexto.baseAtivosAtual} pacientes ativos
+            </div>
+            <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+              Sua marca capta cerca de ~{Math.round(contexto.leadsMensaisMedia)} contatos/mês pelo WhatsApp (E02) com taxa de fechamento de {Math.round(contexto.taxaConversaoGeral * 100)}% (E03).
+            </p>
+
+            {(modoColuna1 === 'analitico' || expandidosColuna1['clientes']) && (
+              <div className="mt-3 pt-3 border-t border-white/10 space-y-1.5 text-[11px] text-slate-300 animate-fadeIn">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Leads Mensais Média:</span>
+                  <span className="font-mono text-white">~{Math.round(contexto.leadsMensaisMedia)}/mês</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Taxa de Conversão Real:</span>
+                  <span className="font-mono text-indigo-300">{Math.round(contexto.taxaConversaoGeral * 100)}%</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Canais Principais (E02):</span>
+                  <span className="font-bold text-white text-[10px]">{contexto.canaisCampeoes.length > 0 ? contexto.canaisCampeoes.join(', ') : 'Instagram & WhatsApp'}</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Card Preços & Serviços Atual (Eixo 04) */}
+          <div className={`p-4 rounded-xl border transition-all ${
+            blocoFocado === 'preco'
+              ? 'bg-indigo-950/50 border-indigo-500 ring-2 ring-indigo-500/30'
+              : 'bg-white/5 border-white/10'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider block">
+                🏷️ Preços & Programas (Eixo 04)
+              </span>
+              <button
+                type="button"
+                onClick={() => toggleExpandido1('preco')}
+                className="text-slate-400 hover:text-white text-[10px] font-semibold flex items-center gap-1"
+              >
+                {expandidosColuna1['preco'] || modoColuna1 === 'analitico' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            </div>
+            <div className="text-sm font-bold text-white truncate mt-1">
+              {contexto.servicos[0]?.nomeComercial || 'Acompanhamento Nutricional'}
+            </div>
+            <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+              Preço atual de R$ {contexto.servicos[0]?.precoVenda || 0}, gerando ticket médio de R$ {Math.round(contexto.ticketMedioAtual)}/mês por paciente.
+            </p>
+
+            {(modoColuna1 === 'analitico' || expandidosColuna1['preco']) && (
+              <div className="mt-3 pt-3 border-t border-white/10 space-y-2 text-[11px] text-slate-300 animate-fadeIn">
+                <span className="text-[10px] font-bold text-slate-400 uppercase block">Portfólio Cadastrado (F04):</span>
+                {contexto.servicos.map((srv) => (
+                  <div key={srv.id} className="p-2 rounded bg-white/5 flex justify-between items-center text-[10px]">
+                    <span className="font-semibold text-white">{srv.nomeComercial}</span>
+                    <span className="font-mono text-emerald-400 font-bold">R$ {srv.precoVenda}</span>
+                    <span className="text-slate-400">{srv.pacientesAtivosVigentes} alunos</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Card Carga Horária & Agenda Atual (Eixos 05 e 06) */}
+          <div className={`p-4 rounded-xl border transition-all ${
+            blocoFocado === 'tempo'
+              ? 'bg-indigo-950/50 border-indigo-500 ring-2 ring-indigo-500/30'
+              : 'bg-white/5 border-white/10'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider block">
+                ⏰ Agenda & Carga Horária (E05 e E06)
+              </span>
+              <button
+                type="button"
+                onClick={() => toggleExpandido1('tempo')}
+                className="text-slate-400 hover:text-white text-[10px] font-semibold flex items-center gap-1"
+              >
+                {expandidosColuna1['tempo'] || modoColuna1 === 'analitico' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            </div>
+            <div className="text-lg font-extrabold text-white font-mono mt-1">
+              {contexto.tetoSemanaPerfeitaPadrao} hrs / semana
+            </div>
+            <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+              Grade atual de trabalho distribuída em consultas diretas, elaboração de dietas e gestão.
+            </p>
+
+            {(modoColuna1 === 'analitico' || expandidosColuna1['tempo']) && (
+              <div className="mt-3 pt-3 border-t border-white/10 space-y-1.5 text-[11px] text-slate-300 animate-fadeIn">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Tempo Paciente Novo:</span>
+                  <span className="font-mono text-white">{state.premissas.minutosPacienteNovo ?? 90} minutos</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Tempo Paciente Ativo:</span>
+                  <span className="font-mono text-white">{state.premissas.minutosPacienteAtivo ?? 45} minutos</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Teto Semana Perfeita:</span>
+                  <span className="font-mono text-purple-300 font-bold">{contexto.tetoSemanaPerfeitaPadrao} hrs/semana</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Card Equipe & Folha Atual (Eixo 07) */}
+          <div className="p-4 rounded-xl bg-white/5 border border-white/10">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-wider block">
+                👥 Estrutura de Equipe (Eixo 07)
+              </span>
+              <button
+                type="button"
+                onClick={() => toggleExpandido1('equipe')}
+                className="text-slate-400 hover:text-white text-[10px] font-semibold flex items-center gap-1"
+              >
+                {expandidosColuna1['equipe'] || modoColuna1 === 'analitico' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+            </div>
+            <div className="text-xs font-bold text-slate-200 mt-1">
+              {contexto.membrosEquipe.length > 0 ? `${contexto.membrosEquipe.length} membro(s) na equipe` : 'Atendimento 100% Solo'}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Custo de folha: R$ {contexto.membrosEquipe.reduce((acc, m) => acc + (m.custoMensalReais || 0), 0).toLocaleString('pt-BR')}/mês.
+            </p>
+
+            {(modoColuna1 === 'analitico' || expandidosColuna1['equipe']) && contexto.membrosEquipe.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-white/10 space-y-1.5 text-[11px] text-slate-300 animate-fadeIn">
+                {contexto.membrosEquipe.map((m: any, idx: number) => (
+                  <div key={idx} className="p-2 rounded bg-white/5 flex justify-between items-center text-[10px]">
+                    <span className="font-semibold text-white">{m.nome || m.funcao || `Membro ${idx+1}`}</span>
+                    <span className="font-mono text-amber-300">R$ {m.custoMensalReais || 0}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ================================================================ */}
+        {/* COLUNA 2 (MEIO): MESA DE SIMULAÇÃO & METAS DO EIXO 08             */}
+        {/* ================================================================ */}
+        <div className="space-y-5 overflow-y-auto pr-2 h-full max-h-full scrollbar-thin">
+
+          {/* ================================================================ */}
+          {/* MÓDULO INTEGRADO DE METAS FINANCEIRAS (EIXO 08) & PRAZO           */}
+          {/* ================================================================ */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-950/90 via-slate-900 to-slate-950 border border-indigo-500/40 shadow-xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 font-label flex items-center gap-1">
+                  🎯 Eixo 08 Integrado · Suas Metas Financeiras & Prazo
+                </span>
+                <h3 className="text-sm font-bold text-white mt-0.5">
+                  Defina a Meta que deseja Atingir no seu Consultório
+                </h3>
+              </div>
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                Autonomia Total
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Campo 1: Meta de Sobra Limpa (Lucro Líquido) */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-emerald-400">
+                  💰 Sobra Limpa Desejada (Lucro Líquido R$/mês):
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-mono font-bold">R$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    id="input_meta_lucro_liquido"
+                    value={state.numeroMagico || ''}
+                    onChange={(e) => {
+                      const val = Math.max(0, Number(e.target.value));
+                      setState((prev) => ({ ...prev, numeroMagico: val, metaLucroLiquidoReais: val }));
+                    }}
+                    placeholder="10000"
+                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-black/60 border border-emerald-500/40 text-white font-mono font-bold text-sm focus:outline-none focus:border-emerald-400"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  Quanto você quer colocar no seu bolso limpo todos os meses.
+                </p>
+              </div>
+
+              {/* Campo 2: Meta de Faturamento Bruto (Opcional/Calculado) */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-indigo-300">
+                  📈 Meta de Faturamento Bruto (R$/mês):
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-2.5 text-xs text-slate-400 font-mono font-bold">R$</span>
+                  <input
+                    type="number"
+                    min="0"
+                    id="input_meta_faturamento_bruto"
+                    value={state.metaFaturamentoBrutoReais ?? resultado.receitaSimuladaMensal}
+                    onChange={(e) => {
+                      const val = Math.max(0, Number(e.target.value));
+                      setState((prev) => ({ ...prev, metaFaturamentoBrutoReais: val }));
+                    }}
+                    placeholder="15000"
+                    className="w-full pl-9 pr-3 py-2 rounded-xl bg-black/60 border border-indigo-500/40 text-white font-mono font-bold text-sm focus:outline-none focus:border-indigo-400"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400">
+                  Total bruto de vendas cobrando impostos e custos fixos.
+                </p>
+              </div>
+            </div>
+
+            {/* Campo 3: Seletor de Horizonte Temporal / Prazo */}
+            <div className="space-y-2 pt-2 border-t border-white/10">
+              <label className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                ⏳ Prazo para Realizar esta Meta:
+              </label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {[1, 3, 6, 12].map((meses) => (
+                  <button
+                    key={meses}
+                    type="button"
+                    onClick={() => setState((prev) => ({ ...prev, prazoMeses: meses as any }))}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-extrabold transition-all border cursor-pointer ${
+                      (state.prazoMeses || 1) === meses
+                        ? 'bg-purple-600 border-purple-400 text-white shadow-lg shadow-purple-600/30'
+                        : 'bg-white/5 border-white/10 text-slate-300 hover:bg-white/10'
+                    }`}
+                  >
+                    {meses === 1 ? '1 Mês (Imediato)' : `${meses} Meses`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 shadow-xl space-y-1">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              🎛️ 2. Sua Mesa de Simulação Livre
+            </h3>
+            <p className="text-[11px] text-slate-300">
+              Ajuste os controles abaixo para preencher a distância entre sua Realidade e sua Meta.
+            </p>
+          </div>
+
+          {/* CARD 1 — Novos Pacientes */}
+          <div className="p-6 rounded-2xl bg-white/5 border border-white/10 space-y-5" id="card1_novos_pacientes">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-bold text-sm">
@@ -1520,57 +1736,191 @@ export default function SimuladorCardsFlow({
           </div>
         ) : null}
       </div>
+    </div>
 
-      {/* ---------------------------------------------------------------- */}
-      {/* VEREDITO DO SIMULADOR — PLANO DE AÇÃO TÁTICO DE 90 DIAS          */}
-      {/* ---------------------------------------------------------------- */}
-      <div className="bg-gradient-to-br from-slate-900 to-indigo-950/60 border border-indigo-500/40 rounded-2xl p-6 space-y-4 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/10 pb-4">
-          <div className="flex items-center gap-2 text-indigo-400 font-bold text-sm">
-            <CheckCircle2 className="h-5 w-5" />
-            <span>📋 Veredito Executivo: Ritmo Operacional Semanal ({datas.intervaloProximos90Dias})</span>
+      {/* ================================================================ */}
+      {/* COLUNA 3 (DIREITA): DESDOBRAMENTO TÁTICO & MATERIALIZAÇÃO DO SONHO */}
+      {/* ================================================================ */}
+      <div className="space-y-3.5 overflow-y-auto pr-1.5 h-full max-h-full scrollbar-thin">
+        <div className="p-3.5 rounded-2xl bg-emerald-950/40 border border-emerald-500/30 shadow-xl flex items-center justify-between shrink-0">
+          <div>
+            <h3 className="text-xs font-bold text-white flex items-center gap-2">
+              🚀 3. Como Fazer Acontecer
+            </h3>
+            <p className="text-[10px] text-slate-300">
+              Prescrição tática & materialização do sonho.
+            </p>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-            {resultado.bateuNumeroMagico ? 'Meta Viável ✓' : 'Necessita Ajuste em Alavanca'}
-          </span>
+          <div className="flex bg-black/60 rounded-xl p-0.5 border border-white/10 text-[10px] font-bold">
+            <button
+              type="button"
+              onClick={() => setModoColuna3('sintetico')}
+              className={`px-2.5 py-1 rounded-lg transition-all ${
+                modoColuna3 === 'sintetico'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Sintética
+            </button>
+            <button
+              type="button"
+              onClick={() => setModoColuna3('analitico')}
+              className={`px-2.5 py-1 rounded-lg transition-all ${
+                modoColuna3 === 'analitico'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Analítica
+            </button>
+          </div>
         </div>
 
-        <p className="text-xs text-slate-300 leading-relaxed">
-          Para alcançar os <strong>R$ {resultado.lucroLiquidoSimulado.toLocaleString('pt-BR')}/mês</strong> de lucro líquido sem exceder o seu teto de <strong>{state.tetoSemanaPerfeita}h/semana</strong>, mantenha este ritmo tático no dia a dia:
-        </p>
+        {/* CARD DE NARRATIVA — MATERIALIZAÇÃO DO SONHO */}
+        <div className="p-4 rounded-xl bg-gradient-to-br from-indigo-950/90 via-purple-950/70 to-slate-950 border border-purple-500/40 shadow-xl space-y-2">
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-purple-300 font-label flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-amber-400" /> Materialização da Sua Meta
+          </span>
+          <p className="text-xs text-slate-200 leading-relaxed font-body">
+            {resultado.narrativaMaterializacaoSonho}
+          </p>
+        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-1">
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">1. Meta Semanal de Vendas</span>
-            <p className="text-base font-extrabold text-white">
-              {Math.ceil(resultado.totalPacientesSimulados / 4)} novos contratos
-            </p>
-            <p className="text-[11px] text-slate-400">por semana</p>
+        {/* Card Meta no WhatsApp */}
+        <div className={`p-4 rounded-xl border transition-all ${
+          blocoFocado === 'clientes'
+            ? 'bg-indigo-950/40 border-indigo-500/60 ring-2 ring-indigo-500/30'
+            : 'bg-white/5 border-white/10'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block">
+              💬 Meta no WhatsApp & Captação
+            </span>
+            <button
+              type="button"
+              onClick={() => toggleExpandido3('whatsapp')}
+              className="text-slate-400 hover:text-white text-[10px] font-semibold flex items-center gap-1"
+            >
+              {expandidosColuna3['whatsapp'] || modoColuna3 === 'analitico' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+          </div>
+          <div className="text-xl font-black text-indigo-300 font-mono mt-1">
+            {resultado.leadsNecessariosMes} contatos / mês
+          </div>
+          <p className="text-[11px] text-slate-300 mt-1 leading-relaxed">
+            Exige cerca de ~<strong>{Math.ceil(resultado.leadsNecessariosMes / 4)} contatos/semana</strong> (~{Math.ceil(resultado.leadsNecessariosMes / 20)} por dia útil).
+          </p>
+
+          {(modoColuna3 === 'analitico' || expandidosColuna3['whatsapp']) && (
+            <div className="mt-3 pt-3 border-t border-white/10 space-y-1 text-[11px] text-slate-300 animate-fadeIn">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Captação Semanal:</span>
+                <span className="font-mono text-white">~{Math.ceil(resultado.leadsNecessariosMes / 4.33)}/semana</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Captação por Dia Útil (20 dias):</span>
+                <span className="font-mono text-indigo-300 font-bold">~{Math.ceil(resultado.leadsNecessariosMes / 20)}/dia útil</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Canais Indicados (E02):</span>
+                <span className="font-bold text-white text-[10px]">{contexto.canaisCampeoes.length > 0 ? contexto.canaisCampeoes.join(', ') : 'Instagram & Indicações'}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Card Carga Horária Exigida */}
+        <div className={`p-4 rounded-xl border transition-all ${
+          blocoFocado === 'tempo'
+            ? 'bg-indigo-950/40 border-indigo-500/60 ring-2 ring-indigo-500/30'
+            : 'bg-white/5 border-white/10'
+        }`}>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider block">
+              ⏰ Agenda Exigida vs. Teto
+            </span>
+            <button
+              type="button"
+              onClick={() => toggleExpandido3('agenda')}
+              className="text-slate-400 hover:text-white text-[10px] font-semibold flex items-center gap-1"
+            >
+              {expandidosColuna3['agenda'] || modoColuna3 === 'analitico' ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+          </div>
+          <div className="text-xl font-black text-white font-mono mt-1">
+            {resultado.cargaHorariaSemanalExigida} hrs / semana
+          </div>
+          <div className="text-[11px] text-slate-300 mt-1 flex items-center justify-between">
+            <span>Teto Escolhido:</span>
+            <span className={`font-bold ${resultado.respeitouTetoSemanaPerfeita ? 'text-emerald-400' : 'text-red-400'}`}>
+              {state.tetoSemanaPerfeita} hrs/sem ({resultado.respeitouTetoSemanaPerfeita ? 'Dentro do Teto ✓' : 'Excede Teto'})
+            </span>
           </div>
 
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">2. Meta no WhatsApp</span>
-            <p className="text-base font-extrabold text-indigo-300">
-              {Math.ceil(resultado.leadsNecessariosMes / 4)} interessados
-            </p>
-            <p className="text-[11px] text-slate-400">por semana (~{Math.ceil(resultado.leadsNecessariosMes / 20)}/dia útil)</p>
-          </div>
+          {(modoColuna3 === 'analitico' || expandidosColuna3['agenda']) && (
+            <div className="mt-3 pt-3 border-t border-white/10 space-y-1 text-[11px] text-slate-300 animate-fadeIn">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Atendimento Clínico Directo:</span>
+                <span className="font-mono text-white">~{Math.round(resultado.horasSimuladasMensais * 0.6 / 4.33)} hrs/sem</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Elaboração de Dietas/Planos:</span>
+                <span className="font-mono text-white">~{Math.round(resultado.horasSimuladasMensais * 0.25 / 4.33)} hrs/sem</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Gestão & Comercial:</span>
+                <span className="font-mono text-purple-300 font-bold">~{Math.round(resultado.horasSimuladasMensais * 0.15 / 4.33)} hrs/sem</span>
+              </div>
+            </div>
+          )}
+        </div>
 
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">3. Investimento Semanal</span>
-            <p className="text-base font-extrabold text-teal-300">
-              R$ {Math.round((contexto.custosFixosTotais > 0 ? contexto.custosFixosTotais : 1200) / 4)}
-            </p>
-            <p className="text-[11px] text-slate-400">por semana em mídia/anúncios</p>
+        {/* Card Ramp-Up Progressivo (se prazo > 1 ou se modo analítico) */}
+        {((state.prazoMeses || 1) > 1 || modoColuna3 === 'analitico') && resultado.marcosMensais.length > 0 && (
+          <div className="p-4 rounded-xl bg-black/40 border border-white/10 space-y-2">
+            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
+              📈 Plano Progressivo ({state.prazoMeses} Meses)
+            </span>
+            <div className="space-y-1.5 text-xs">
+              {resultado.marcosMensais.map((m) => (
+                <div key={m.mes} className="p-2 rounded bg-white/5 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400 font-bold">Mês {m.mes}</span>
+                  <span className="text-emerald-400 font-mono font-bold">R$ {m.lucroEstimado.toLocaleString('pt-BR')}</span>
+                  <span className="text-slate-300">+{m.novosPacientesAcumulados} pac.</span>
+                </div>
+              ))}
+            </div>
           </div>
+        )}
 
-          <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
-            <span className="text-[10px] text-slate-400 font-bold uppercase block">4. Teto de Atendimento</span>
-            <p className="text-base font-extrabold text-emerald-400">
-              {resultado.cargaHorariaSemanalExigida} horas
-            </p>
-            <p className="text-[11px] text-slate-400">máximo de consultas/semana</p>
+        {/* Card Termômetro A3 de Viabilidade % */}
+        <div className="p-4 rounded-xl bg-indigo-950/50 border border-indigo-500/40 space-y-2">
+          <div className="flex items-center justify-between text-xs font-semibold">
+            <span className="text-slate-300 font-label">Score A3 de Viabilidade</span>
+            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+              {resultado.classificacaoExequibilidade}
+            </span>
           </div>
+          <div className="text-3xl font-black text-indigo-300 font-mono">
+            {resultado.scoreExequibilidadeA3}%
+            <span className="text-xs font-normal text-slate-400 ml-1">viável</span>
+          </div>
+          <p className="text-[11px] text-slate-300 leading-snug">
+            💡 {resultado.explicacaoSimplesExequibilidade}
+          </p>
+        </div>
+
+          {/* BOTÃO PRIMÁRIO DE DESDOBRAMENTO NO SISTEMA */}
+          <button
+            type="button"
+            id="btn_desdobrar_metas_a3"
+            onClick={() => setGavetaAplicarAberta(true)}
+            className="w-full btn-primary flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl text-xs font-extrabold shadow-lg shadow-indigo-600/30 cursor-pointer animate-pulse hover:animate-none"
+          >
+            <Sparkles className="h-4 w-4" />
+            🚀 Transformar Simulação em Metas Reais
+          </button>
         </div>
       </div>
 
@@ -1720,6 +2070,20 @@ export default function SimuladorCardsFlow({
           </div>
         </div>
       )}
+
+      {/* GAVETA DE APLICAÇÃO E RETROALIMENTAÇÃO DE METAS NO SISTEMA */}
+      <GavetaAplicarMetas
+        isOpen={gavetaAplicarAberta}
+        onClose={() => setGavetaAplicarAberta(false)}
+        uid={uid}
+        state={state}
+        resultado={resultado}
+        contexto={contexto}
+        onSucesso={(msg) => {
+          setFeedbackMensagem(msg);
+          setTimeout(() => setFeedbackMensagem(null), 5000);
+        }}
+      />
     </div>
   );
 }
