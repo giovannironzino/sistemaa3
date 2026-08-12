@@ -254,11 +254,16 @@ export default function Fase08Flow({
         )}
 
         {/* Previsibilidade de Caixa para 90 Dias (Contas a Receber) */}
-        <div className="space-y-3 pt-2">
-          <span className="text-xs font-bold text-white block uppercase tracking-wider flex items-center gap-2">
-            <CreditCard className="h-4 w-4 text-indigo-400" />
-            Previsibilidade de Caixa Garantida para os Próximos 90 Dias
-          </span>
+        <div className="space-y-4 pt-2 border-t border-slate-800">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-indigo-400" />
+              Previsibilidade de Caixa Garantida para os Próximos 90 Dias
+            </span>
+            <span className="text-[11px] text-slate-400">
+              Ajuste abaixo a forma de pagamento por paciente para projetar seu caixa.
+            </span>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 text-center space-y-1">
@@ -266,6 +271,7 @@ export default function Fase08Flow({
               <p className="text-base font-extrabold text-emerald-400 font-mono">
                 R$ {contasAReceber.totalRecebimentosGarantidosM1.toLocaleString('pt-BR')}
               </p>
+              <span className="text-[10px] text-slate-500 block">Garantidos em parcelas e boletos</span>
             </div>
 
             <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 text-center space-y-1">
@@ -273,6 +279,7 @@ export default function Fase08Flow({
               <p className="text-base font-extrabold text-indigo-400 font-mono">
                 R$ {contasAReceber.totalRecebimentosGarantidosM2.toLocaleString('pt-BR')}
               </p>
+              <span className="text-[10px] text-slate-500 block">Garantidos em parcelas</span>
             </div>
 
             <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 text-center space-y-1">
@@ -280,6 +287,79 @@ export default function Fase08Flow({
               <p className="text-base font-extrabold text-amber-400 font-mono">
                 R$ {contasAReceber.totalRecebimentosGarantidosM3.toLocaleString('pt-BR')}
               </p>
+              <span className="text-[10px] text-slate-500 block">Garantidos em parcelas</span>
+            </div>
+          </div>
+
+          {/* Tabela Nominal de Pacientes e Seleção por Exceção */}
+          <div className="space-y-2 pt-2">
+            <span className="text-xs font-bold text-slate-300 block">
+              📋 Mapeamento de Pagamento dos Pacientes Ativos (Conferência &amp; Ajuste)
+            </span>
+            <div className="overflow-x-auto rounded-xl border border-slate-800">
+              <table className="w-full text-left border-collapse bg-slate-950">
+                <thead>
+                  <tr className="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-900/60">
+                    <th className="p-3">Paciente (Eixo 01)</th>
+                    <th className="p-3">Serviço Contratado (Eixo 04)</th>
+                    <th className="p-3">Valor Contrato</th>
+                    <th className="p-3 text-center">Forma de Pagamento</th>
+                    <th className="p-3 text-right">Parcela Mensal</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800 text-xs">
+                  {contasAReceber.pacientesContasAReceber.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-800/40 transition-all">
+                      <td className="p-3 font-bold text-white flex items-center gap-2">
+                        <UserCheck className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                        <span>{p.nomePaciente}</span>
+                      </td>
+                      <td className="p-3 text-slate-300">{p.servicoContratado}</td>
+                      <td className="p-3 font-mono font-bold text-emerald-400">R$ {p.valorTotalContrato}</td>
+                      <td className="p-3 text-center">
+                        <select
+                          value={p.formaPagamento}
+                          onChange={(e) =>
+                            handleFormaPagamentoChange(
+                              p.id,
+                              e.target.value as FormaPagamentoPaciente,
+                              p.numeroParcelas
+                            )
+                          }
+                          className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-white font-semibold focus:border-indigo-500"
+                        >
+                          <option value="pix_avista">🟢 À vista PIX / Dinheiro</option>
+                          <option value="cartao_parcelado">💳 Cartão Parcelado</option>
+                          <option value="boleto_recorrente">📄 Boleto Recorrente</option>
+                        </select>
+
+                        {p.formaPagamento === 'cartao_parcelado' && (
+                          <select
+                            value={p.numeroParcelas}
+                            onChange={(e) =>
+                              handleFormaPagamentoChange(
+                                p.id,
+                                'cartao_parcelado',
+                                parseInt(e.target.value, 10) || 1
+                              )
+                            }
+                            className="ml-2 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-indigo-300 font-bold"
+                          >
+                            <option value={2}>2x</option>
+                            <option value={3}>3x</option>
+                            <option value={4}>4x</option>
+                            <option value={6}>6x</option>
+                            <option value={12}>12x</option>
+                          </select>
+                        )}
+                      </td>
+                      <td className="p-3 text-right font-mono font-bold text-amber-400">
+                        R$ {p.valorParcelaMensal}/mês
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
