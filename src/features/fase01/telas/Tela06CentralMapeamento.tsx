@@ -28,6 +28,11 @@ interface Tela06CentralMapeamentoProps {
 
 type MesKey = 'mesM2' | 'mesM1' | 'mesM0';
 
+import CestaDeDadosDrawer from '../../../components/CestaDeDadosDrawer';
+import TelaConfirmacaoCesta from '../../../components/TelaConfirmacaoCesta';
+import { alagarDadosDaCestaNoSistema } from '../../../lib/alagamentoRelatorioService';
+import type { ResultadoProcessamentoCesta, ItemCestaExtraido } from '../../../lib/geminiImportService';
+
 export default function Tela06CentralMapeamento({
   pacientesIniciais,
   nomeConsultorioInicial = '',
@@ -45,6 +50,11 @@ export default function Tela06CentralMapeamento({
   const [totalAtivosCustom, setTotalAtivosCustom] = useState<number | ''>(
     totalPacientesAtivosInicial ?? (pacientesIniciais.length > 0 ? pacientesIniciais.length : 30)
   );
+
+  // Cesta de Dados State (Atalho opcional)
+  const [cestaDrawerOpen, setCestaDrawerOpen] = useState(false);
+  const [confirmacaoCestaOpen, setConfirmacaoCestaOpen] = useState(false);
+  const [resultadoCesta, setResultadoCesta] = useState<ResultadoProcessamentoCesta | null>(null);
 
   // Mês ativo no formulário
   const [mesForm, setMesForm] = useState<MesKey>('mesM0');
@@ -164,18 +174,28 @@ export default function Tela06CentralMapeamento({
     <div className="w-full max-w-6xl mx-auto space-y-8" id="tela_central_mapeamento">
       {/* ── PASSO 0: Meu Cadastro & Setup do Software de Prontuário ── */}
       <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 rounded-2xl p-6 space-y-5 shadow-2xl">
-        <div className="flex items-center gap-3 border-b border-white/10 pb-4">
-          <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
-            <Building2 className="h-5 w-5" />
+        <div className="flex items-center justify-between border-b border-white/10 pb-4 flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-indigo-500/20 text-indigo-400">
+              <Building2 className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400">
+                Passo 0 · Setup Inicial da Clínica &amp; Software
+              </span>
+              <h2 className="text-lg font-bold text-white leading-tight">
+                Qual software você usa para organizar seus pacientes?
+              </h2>
+            </div>
           </div>
-          <div>
-            <span className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400">
-              Passo 0 · Setup Inicial da Clínica &amp; Software
-            </span>
-            <h2 className="text-lg font-bold text-white leading-tight">
-              Qual software você usa para organizar seus pacientes?
-            </h2>
-          </div>
+
+          <button
+            type="button"
+            onClick={() => setCestaDrawerOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-500/15 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/25 text-xs font-bold transition-all cursor-pointer shadow-lg shadow-indigo-500/10"
+          >
+            <Sparkles className="h-4 w-4" /> 🌾 Atalho: Importar com Cesta de Dados (Opcional)
+          </button>
         </div>
 
         {/* Banner Orientador em Linguagem Simples */}
@@ -545,9 +565,55 @@ export default function Tela06CentralMapeamento({
           }`}
         >
           Avançar para a Escolha do Método
-          <ArrowRight className="h-4 w-4" />
         </button>
       </div>
+
+      {/* Modal / Drawer da Cesta de Dados (Atalho Opcional) */}
+      {cestaDrawerOpen && (
+        <CestaDeDadosDrawer
+          onFechar={() => setCestaDrawerOpen(false)}
+          onProcessado={(resultado) => {
+            setCestaDrawerOpen(false);
+            setResultadoCesta(resultado);
+            setConfirmacaoCestaOpen(true);
+          }}
+        />
+      )}
+
+      {/* Tela de Validação Humana Item por Item */}
+      {confirmacaoCestaOpen && resultadoCesta && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+          <TelaConfirmacaoCesta
+            itensIniciais={resultadoCesta.itens}
+            softwareDetectado={resultadoCesta.softwareDetectado}
+            totalAtivosDetectados={resultadoCesta.totalPacientesAtivosDetectados}
+            onCancelar={() => setConfirmacaoCestaOpen(false)}
+            onConfirmar={async (itensValidados) => {
+              setConfirmacaoCestaOpen(false);
+              // Converte itens validados da Cesta em pacientes do Eixo 01
+              const novosPacientesCesta: PacienteMapeadoEixo01[] = itensValidados
+                .filter((i) => i.tipo === 'paciente')
+                .map((i, idx) => ({
+                  id: `pac_cesta_${Date.now()}_${idx}`,
+                  nome: i.nome,
+                  dorId: (i.dorId as ClusterId) || 'estetica_emagrecimento',
+                  pilarForte: 'Liberdade & Praticidade',
+                  elementoDiferencial: 'Transformação Visual',
+                  ticketPagoEstimado: i.valor || 450,
+                  mesAtendimento: i.mesAtendimento || 'mesM0',
+                  createdAt: new Date().toISOString(),
+                }));
+
+              if (novosPacientesCesta.length > 0) {
+                setPacientes((prev) => [...prev, ...novosPacientesCesta]);
+              }
+              if (resultadoCesta.totalPacientesAtivosDetectados) {
+                setTotalAtivosCustom(resultadoCesta.totalPacientesAtivosDetectados);
+              }
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
