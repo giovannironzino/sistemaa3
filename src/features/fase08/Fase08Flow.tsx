@@ -9,7 +9,7 @@ import { db } from '../../lib/firebase';
 import { DollarSign, Plus, Trash2, CheckCircle2, ArrowRight, Sparkles, Layers, Scale, Calculator, Tag, Calendar, ChevronDown, ChevronUp, Wallet, Receipt, CreditCard, Edit3, UserCheck, ShieldCheck } from 'lucide-react';
 import { calcularDreExecutiva, DespesaFixaItem, FaturamentoMensalHistorico } from './lib/calcularDreExecutiva';
 import { calcularPrecificacaoServicos } from './lib/calcularPrecificacaoServicos';
-import { calcularContasAReceber, FormaPagamentoPaciente } from './lib/calcularContasAReceber';
+import { calcularContasAReceber, FormaPagamentoPaciente, ConfigPagamentoPaciente } from './lib/calcularContasAReceber';
 
 interface Fase08FlowProps {
   uid: string;
@@ -38,9 +38,9 @@ export default function Fase08Flow({
   const [insumosPorConsultaInput, setInsumosPorConsultaInput] = useState<number>(initialState?.insumoPorConsulta ?? 15);
   const [proLaboreInput, setProLaboreInput] = useState<number>(initialState?.proLaborePessoal ?? 5000);
 
-  // Módulo de Contas a Receber: Formas de Pagamento por Paciente
+  // Módulo de Contas a Receber: Formas de Pagamento por Paciente & Antecipação
   const [formasPagamentoOverride, setFormasPagamentoOverride] = useState<
-    Record<string, { forma: FormaPagamentoPaciente; parcelas: number }>
+    Record<string, ConfigPagamentoPaciente>
   >(() => {
     return initialState?.formasPagamentoOverride || {};
   });
@@ -94,11 +94,21 @@ export default function Fase08Flow({
     return calcularPrecificacaoServicos(servicosEixo04, dre.despesasFixasTotaisMensais, 120);
   }, [servicosEixo04, dre.despesasFixasTotaisMensais]);
 
-  function handleFormaPagamentoChange(pacienteId: string, forma: FormaPagamentoPaciente, parcelas: number = 1) {
+  function handleFormaPagamentoChange(pacienteId: string, forma: FormaPagamentoPaciente, parcelas: number = 1, antecipado: boolean = false) {
     setFormasPagamentoOverride((prev) => ({
       ...prev,
-      [pacienteId]: { forma, parcelas },
+      [pacienteId]: { forma, parcelas, antecipado },
     }));
+  }
+
+  function handleToggleAntecipacao(pacienteId: string, antecipado: boolean) {
+    setFormasPagamentoOverride((prev) => {
+      const atual = prev[pacienteId] || { forma: 'cartao_parcelado', parcelas: 3 };
+      return {
+        ...prev,
+        [pacienteId]: { ...atual, antecipado },
+      };
+    });
   }
 
   function handleAdicionarDespesa(e: React.FormEvent) {
@@ -334,27 +344,47 @@ export default function Fase08Flow({
                         </select>
 
                         {p.formaPagamento === 'cartao_parcelado' && (
-                          <select
-                            value={p.numeroParcelas}
-                            onChange={(e) =>
-                              handleFormaPagamentoChange(
-                                p.id,
-                                'cartao_parcelado',
-                                parseInt(e.target.value, 10) || 1
-                              )
-                            }
-                            className="ml-2 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-indigo-300 font-bold"
-                          >
-                            <option value={2}>2x</option>
-                            <option value={3}>3x</option>
-                            <option value={4}>4x</option>
-                            <option value={6}>6x</option>
-                            <option value={12}>12x</option>
-                          </select>
+                          <div className="mt-1 flex items-center justify-center gap-2">
+                            <select
+                              value={p.numeroParcelas}
+                              onChange={(e) =>
+                                handleFormaPagamentoChange(
+                                  p.id,
+                                  'cartao_parcelado',
+                                  parseInt(e.target.value, 10) || 1,
+                                  p.antecipado
+                                )
+                              }
+                              className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-indigo-300 font-bold"
+                            >
+                              <option value={2}>2x</option>
+                              <option value={3}>3x</option>
+                              <option value={4}>4x</option>
+                              <option value={6}>6x</option>
+                              <option value={12}>12x</option>
+                            </select>
+
+                            <label className="inline-flex items-center gap-1.5 cursor-pointer bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md hover:bg-amber-500/20 transition-all">
+                              <input
+                                type="checkbox"
+                                checked={p.antecipado}
+                                onChange={(e) => handleToggleAntecipacao(p.id, e.target.checked)}
+                                className="h-3 w-3 rounded border-slate-700 text-amber-500 focus:ring-0 cursor-pointer"
+                              />
+                              <span className="text-[10px] font-bold text-amber-300">⚡ Antecipar no Banco</span>
+                            </label>
+                          </div>
                         )}
                       </td>
-                      <td className="p-3 text-right font-mono font-bold text-amber-400">
-                        R$ {p.valorParcelaMensal}/mês
+                      <td className="p-3 text-right font-mono font-bold">
+                        {p.antecipado ? (
+                          <div>
+                            <span className="text-emerald-400 block text-xs">R$ {p.recebimentoM0Liquido} (100% no mês)</span>
+                            <span className="text-[9px] text-amber-400 block font-normal">Taxa Banco: -R$ {p.custoTaxaAntecipacao}</span>
+                          </div>
+                        ) : (
+                          <span className="text-amber-400 text-xs">R$ {p.valorParcelaMensal}/mês</span>
+                        )}
                       </td>
                     </tr>
                   ))}
