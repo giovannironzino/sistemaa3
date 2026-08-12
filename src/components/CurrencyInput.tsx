@@ -1,80 +1,81 @@
 import React, { useState, useEffect } from 'react';
+import { formatarMoedaBRL, parseMoedaBRL } from '../lib/formatters';
+
+export { formatarMoedaBRL as formatBRL } from '../lib/formatters';
 
 interface CurrencyInputProps {
-  value: number;
-  onChange: (value: number) => void;
+  value: number | undefined;
+  onChange: (val: number) => void;
+  label?: string;
   placeholder?: string;
   className?: string;
-  disabled?: boolean;
   id?: string;
-  label?: string;
-}
-
-export function formatBRL(val: number): string {
-  if (isNaN(val) || val === null || val === undefined) return 'R$ 0,00';
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL'
-  }).format(val);
+  disabled?: boolean;
+  min?: number;
 }
 
 export default function CurrencyInput({
   value,
   onChange,
+  label,
   placeholder = 'R$ 0,00',
   className = '',
-  disabled = false,
   id,
-  label
+  disabled = false,
 }: CurrencyInputProps) {
-  const [displayValue, setDisplayValue] = useState<string>('');
+  const [displayValue, setDisplayValue] = useState<string>(() => {
+    return value !== undefined && value !== null && !isNaN(value) ? formatarMoedaBRL(value) : '';
+  });
 
   useEffect(() => {
-    if (value === undefined || value === null || isNaN(value)) {
+    if (value !== undefined && value !== null && !isNaN(value)) {
+      const parsedCurrent = parseMoedaBRL(displayValue);
+      if (Math.abs(parsedCurrent - value) > 0.001) {
+        setDisplayValue(formatarMoedaBRL(value));
+      }
+    } else if (value === undefined || value === null) {
       setDisplayValue('');
-    } else if (value === 0) {
-      setDisplayValue(value === 0 && displayValue === '' ? '' : formatBRL(0));
-    } else {
-      setDisplayValue(formatBRL(value));
     }
   }, [value]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value;
-    // Keep only numeric characters
-    const digitsOnly = rawValue.replace(/\D/g, '');
-    
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const rawInput = e.target.value;
+    const digitsOnly = rawInput.replace(/\D/g, '');
+
     if (!digitsOnly) {
       setDisplayValue('');
       onChange(0);
       return;
     }
 
-    // Convert digits to number (treating last 2 digits as cents)
     const numericValue = parseFloat(digitsOnly) / 100;
-    setDisplayValue(formatBRL(numericValue));
+    setDisplayValue(formatarMoedaBRL(numericValue));
     onChange(numericValue);
-  };
+  }
+
+  function handleBlur() {
+    if (value !== undefined && !isNaN(value)) {
+      setDisplayValue(formatarMoedaBRL(value));
+    }
+  }
 
   return (
-    <div className="w-full space-y-1">
+    <div className="space-y-1.5">
       {label && (
         <label htmlFor={id} className="block text-xs font-semibold text-slate-300">
           {label}
         </label>
       )}
-      <div className="relative">
-        <input
-          id={id}
-          type="text"
-          inputMode="numeric"
-          disabled={disabled}
-          value={displayValue}
-          onChange={handleChange}
-          placeholder={placeholder}
-          className={`w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-medium text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-all ${className}`}
-        />
-      </div>
+      <input
+        type="text"
+        id={id}
+        disabled={disabled}
+        value={displayValue}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        placeholder={placeholder}
+        className={className || 'w-full bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 text-sm text-emerald-400 font-bold focus:border-emerald-500'}
+      />
     </div>
   );
 }

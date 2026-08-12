@@ -7,6 +7,7 @@ import React, { useState, useMemo } from 'react';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Users, UserPlus, Trash2, CheckCircle2, ArrowRight, Sparkles, ShieldAlert, CheckSquare, Layers, FileText, Briefcase } from 'lucide-react';
+import CurrencyInput from '../../components/CurrencyInput';
 import { CATALOGO_PAPEIS_EQUIPE } from './catalogoPapeisEquipe';
 import { calcularCapacidadeEquipe, MembroEquipeCadastrado } from './lib/calcularCapacidadeEquipe';
 
@@ -217,13 +218,11 @@ export default function Fase07Flow({
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Custo Mensal (R$):</label>
-                  <input
-                    type="number"
-                    min={0}
-                    value={custoNovo}
-                    onChange={(e) => setCustoNovo(e.target.value)}
-                    placeholder="1200"
+                  <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Custo Mensal:</label>
+                  <CurrencyInput
+                    value={parseFloat(custoNovo) || 0}
+                    onChange={(val) => setCustoNovo(String(val))}
+                    placeholder="R$ 0,00"
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-emerald-400 font-bold focus:border-emerald-500"
                   />
                 </div>

@@ -10,6 +10,8 @@ import { DollarSign, Plus, Trash2, CheckCircle2, ArrowRight, Sparkles, Layers, S
 import { calcularDreExecutiva, DespesaFixaItem, FaturamentoMensalHistorico } from './lib/calcularDreExecutiva';
 import { calcularPrecificacaoServicos } from './lib/calcularPrecificacaoServicos';
 import { calcularContasAReceber, FormaPagamentoPaciente, ConfigPagamentoPaciente } from './lib/calcularContasAReceber';
+import CurrencyInput from '../../components/CurrencyInput';
+import { formatarMoedaBRL } from '../../lib/formatters';
 
 interface Fase08FlowProps {
   uid: string;
@@ -252,15 +254,12 @@ export default function Fase08Flow({
         {/* Campo de Ajuste Excepcional */}
         {exibirAjusteFaturamento && (
           <div className="p-4 bg-slate-950 rounded-xl border border-indigo-500/30 space-y-2 animate-fade-in">
-            <span className="text-xs font-bold text-indigo-400 block">Ajuste Excepcional do Faturamento Comercial (R$)</span>
+            <span className="text-xs font-bold text-indigo-400 block">Ajuste Excepcional do Faturamento Comercial</span>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-400">R$</span>
-              <input
-                type="number"
-                min={0}
+              <CurrencyInput
                 value={faturamentoOverride ?? dre.faturamentoBrutoMensal}
-                onChange={(e) => setFaturamentoOverride(parseFloat(e.target.value) || 0)}
-                className="w-40 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-emerald-400 font-bold text-right focus:border-indigo-500"
+                onChange={(val) => setFaturamentoOverride(val)}
+                className="w-44 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-emerald-400 font-bold text-right focus:border-indigo-500"
               />
               <button
                 type="button"
@@ -429,12 +428,10 @@ export default function Fase08Flow({
               </div>
 
               <div className="flex items-center gap-3">
-                <input
-                  type="number"
-                  min={0}
+                <CurrencyInput
                   value={d.valorMensal}
-                  onChange={(e) => handleEditarDespesaValor(d.id, parseFloat(e.target.value) || 0)}
-                  className="w-28 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-emerald-400 font-bold text-right focus:border-emerald-500 font-mono"
+                  onChange={(val) => handleEditarDespesaValor(d.id, val)}
+                  className="w-32 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-emerald-400 font-bold text-right focus:border-emerald-500 font-mono"
                 />
                 {!d.origemAutomatico && (
                   <button
@@ -460,7 +457,7 @@ export default function Fase08Flow({
                 value={descricaoNova}
                 onChange={(e) => setDescricaoNova(e.target.value)}
                 placeholder="Ex: Aluguel do Consultório"
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white focus:border-emerald-500"
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white focus:border-emerald-500"
               />
             </div>
 
@@ -469,7 +466,7 @@ export default function Fase08Flow({
               <select
                 value={categoriaNova}
                 onChange={(e) => setCategoriaNova(e.target.value as DespesaFixaItem['categoria'])}
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-white font-semibold focus:border-emerald-500"
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-white font-semibold focus:border-emerald-500"
               >
                 <option value="estrutura">Estrutura &amp; Aluguel</option>
                 <option value="software">Software &amp; Tecnologia</option>
@@ -480,14 +477,12 @@ export default function Fase08Flow({
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Valor Mensal (R$):</label>
-              <input
-                type="number"
-                min={0}
-                value={valorNovo}
-                onChange={(e) => setValorNovo(e.target.value)}
-                placeholder="500"
-                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-emerald-400 font-bold focus:border-emerald-500"
+              <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Valor Mensal:</label>
+              <CurrencyInput
+                value={parseFloat(valorNovo) || 0}
+                onChange={(val) => setValorNovo(String(val))}
+                placeholder="R$ 0,00"
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-3 py-2 text-xs text-emerald-400 font-bold focus:border-emerald-500"
               />
             </div>
           </div>
@@ -512,32 +507,26 @@ export default function Fase08Flow({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
-            <span className="text-xs font-bold text-white block">Insumos Diretos por Consulta (R$/atendimento)</span>
+            <span className="text-xs font-bold text-white block">Insumos Diretos por Consulta</span>
             <p className="text-[11px] text-slate-400">Materiais descartáveis, luvas, mimos e brindes entregues.</p>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-400">R$</span>
-              <input
-                type="number"
-                min={0}
+              <CurrencyInput
                 value={insumosPorConsultaInput}
-                onChange={(e) => setInsumosPorConsultaInput(parseFloat(e.target.value) || 0)}
-                className="w-28 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-amber-400 font-bold text-right focus:border-emerald-500"
+                onChange={(val) => setInsumosPorConsultaInput(val)}
+                className="w-32 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-amber-400 font-bold text-right focus:border-emerald-500"
               />
               <span className="text-xs text-slate-400">por consulta</span>
             </div>
           </div>
 
           <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
-            <span className="text-xs font-bold text-white block">Pró-Labore Pessoal do Nutricionista (R$/mês)</span>
+            <span className="text-xs font-bold text-white block">Pró-Labore Pessoal do Nutricionista</span>
             <p className="text-[11px] text-slate-400">Sua retirada mensal pessoal como sócio/profissional principal.</p>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-400">R$</span>
-              <input
-                type="number"
-                min={0}
+              <CurrencyInput
                 value={proLaboreInput}
-                onChange={(e) => setProLaboreInput(parseFloat(e.target.value) || 0)}
-                className="w-32 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-emerald-400 font-extrabold text-right focus:border-emerald-500"
+                onChange={(val) => setProLaboreInput(val)}
+                className="w-36 bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-emerald-400 font-extrabold text-right focus:border-emerald-500"
               />
               <span className="text-xs text-slate-400">por mês</span>
             </div>
@@ -682,19 +671,16 @@ export default function Fase08Flow({
                       </span>
                     )}
                   </td>
-                  <td className="p-3 text-emerald-400 font-mono font-bold">R$ {item.precoTabela}</td>
+                  <td className="p-3 text-emerald-400 font-mono font-bold">
+                    {formatarMoedaBRL(item.precoTabela)}
+                  </td>
                   <td className="p-3 text-center">
                     <div className="flex items-center justify-center gap-1">
-                      <span className="text-[10px] text-slate-500">R$</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={item.precoConcorrenciaDireta || ''}
-                        onChange={(e) =>
-                          handleConcorrenciaPrecoChange(item.id, parseFloat(e.target.value) || 0)
-                        }
-                        placeholder="Opcional"
-                        className="w-24 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-indigo-300 font-bold text-center focus:border-indigo-500"
+                      <CurrencyInput
+                        value={item.precoConcorrenciaDireta || 0}
+                        onChange={(val) => handleConcorrenciaPrecoChange(item.id, val)}
+                        placeholder="R$ 0,00"
+                        className="w-28 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-indigo-300 font-bold text-center focus:border-indigo-500"
                       />
                     </div>
                   </td>
