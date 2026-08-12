@@ -1,20 +1,19 @@
 // Fase05Flow.tsx
 // Eixo 05 — Entrega & Retenção do Paciente / Sucesso do Cliente.
-// Reorganizado em 6 Etapas Racionais da Jornada do Paciente.
-// Suporta auto-expansão, 3 botões (SIM / QUERO FAZER / NÃO), colapso automático e trava de 30%.
+// Reorganizado em 6 Etapas Racionais da Jornada do Paciente com a Matriz de Quantidades por Produto do Eixo 04.
 
 import React, { useState, useMemo } from 'react';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { PackageCheck, CheckCircle2, ArrowRight, Sparkles, Users, MessageSquare, ShieldAlert, HeartHandshake, Stethoscope, FileSpreadsheet, Clock, UserCheck, ChevronDown, ChevronUp, Calculator, Layers, Sparkle } from 'lucide-react';
 import { CATALOGO_20_ENTREGAVEIS, CATALOGO_RITOS_RETENCAO_CS, ExecutorEntregavel, StatusOpcaoEntregavel } from './catalogo20Entregaveis';
-import { calcularRetencaoECarga, EstadoEntregavelItem, EstadoRitoRetencaoItem } from './lib/calcularRetencaoECarga';
+import { calcularRetencaoECarga, EstadoEntregavelItem, EstadoRitoRetencaoItem, ConfigProdutoEntrega } from './lib/calcularRetencaoECarga';
 
 interface Fase05FlowProps {
   uid: string;
   initialState?: any;
   pacientesEixo01Count?: number;
-  servicosEixo04?: Array<{ id?: string; nome?: string; titulo?: string }>;
+  servicosEixo04?: Array<{ id?: string; nome?: string; titulo?: string; duracaoMeses?: number }>;
   onAvancarEixo06?: () => void;
 }
 
@@ -31,12 +30,13 @@ export default function Fase05Flow({
       return servicosEixo04.map((s, idx) => ({
         id: s.id || `serv_${idx}`,
         nome: s.nome || s.titulo || `Serviço ${idx + 1}`,
+        duracaoMeses: s.duracaoMeses || (idx === 0 ? 1 : idx === 1 ? 3 : 12),
       }));
     }
     return [
-      { id: 'serv_1', nome: 'Consulta Avulsa + Retorno' },
-      { id: 'serv_2', nome: 'Programa Nutricional Trimestral' },
-      { id: 'serv_3', nome: 'Plano Semestral de Performance' },
+      { id: 'serv_1', nome: 'Consulta Avulsa + Retorno', duracaoMeses: 1 },
+      { id: 'serv_2', nome: 'Programa Nutricional Trimestral', duracaoMeses: 3 },
+      { id: 'serv_3', nome: 'Plano Semestral de Performance', duracaoMeses: 6 },
     ];
   }, [servicosEixo04]);
 
@@ -45,6 +45,18 @@ export default function Fase05Flow({
     const init: Record<string, EstadoEntregavelItem> = {};
     CATALOGO_20_ENTREGAVEIS.forEach((item) => {
       const salvo = initialState?.estadoEntregaveis?.[item.id];
+      const configPorProdutoInit: Record<string, ConfigProdutoEntrega> = {};
+
+      listaServicos.forEach((s) => {
+        const salvoProd = salvo?.configPorProduto?.[s.id];
+        configPorProdutoInit[s.id] = {
+          ativo: salvoProd?.ativo ?? true,
+          quantidadeNoContrato: salvoProd?.quantidadeNoContrato ?? (s.duracaoMeses * item.frequenciaPadraoMensal),
+          duracaoMinutos: salvoProd?.duracaoMinutos ?? item.duracaoMinutosPadrao,
+          mesesContrato: s.duracaoMeses,
+        };
+      });
+
       init[item.id] = {
         status: salvo?.status ?? (salvo?.ativo ? 'sim' : 'sim'),
         servicosEixo04Ids: salvo?.servicosEixo04Ids ?? listaServicos.map((s) => s.id),
@@ -52,6 +64,7 @@ export default function Fase05Flow({
         frequenciaMensal: salvo?.frequenciaMensal ?? item.frequenciaPadraoMensal,
         duracaoMinutos: salvo?.duracaoMinutos ?? item.duracaoMinutosPadrao,
         executor: salvo?.executor ?? item.executorDefault,
+        configPorProduto: configPorProdutoInit,
       };
     });
     return init;
@@ -80,8 +93,6 @@ export default function Fase05Flow({
   const [registraCasosRaros, setRegistraCasosRaros] = useState<boolean>(() => initialState?.registraCasosRaros ?? true);
 
   const [salvo, setSalvo] = useState(false);
-
-  // Controla qual item está expandido (Accordion)
   const [itemExpandidoId, setItemExpandidoId] = useState<string | null>(null);
 
   // Motor de Cálculo
@@ -94,8 +105,6 @@ export default function Fase05Flow({
       ...prev,
       [id]: { ...prev[id], status },
     }));
-
-    // Auto-expande se SIM ou QUERO FAZER, recolhe se NÃO
     if (status === 'sim' || status === 'nao_faco_quero_fazer') {
       setItemExpandidoId(id);
     } else {
@@ -110,31 +119,28 @@ export default function Fase05Flow({
     }));
   }
 
-  function handleProdutoToggle(entregavelId: string, produtoId: string) {
+  function handleConfigProdutoChange(entregavelId: string, produtoId: string, patch: Partial<ConfigProdutoEntrega>) {
     setEstadoEntregaveis((prev) => {
-      const atual = prev[entregavelId] || {
-        status: 'sim',
-        servicosEixo04Ids: [],
-        tipoEntrega: 'personalizada',
-        frequenciaMensal: 1,
+      const atual = prev[entregavelId];
+      const configAtual = atual?.configPorProduto?.[produtoId] || {
+        ativo: true,
+        quantidadeNoContrato: 1,
         duracaoMinutos: 15,
-        executor: 'expert',
       };
-      const idsAntigos = atual.servicosEixo04Ids || [];
-      const contem = idsAntigos.includes(produtoId);
-      const novosIds = contem
-        ? idsAntigos.filter((id) => id !== produtoId)
-        : [...idsAntigos, produtoId];
-
       return {
         ...prev,
-        [entregavelId]: { ...atual, servicosEixo04Ids: novosIds },
+        [entregavelId]: {
+          ...atual,
+          configPorProduto: {
+            ...atual.configPorProduto,
+            [produtoId]: { ...configAtual, ...patch },
+          },
+        },
       };
     });
   }
 
   function handleConcluirEProximo(atualId: string) {
-    // Procura o próximo item na lista geral dos 20 entregáveis
     const idx = CATALOGO_20_ENTREGAVEIS.findIndex((i) => i.id === atualId);
     if (idx >= 0 && idx < CATALOGO_20_ENTREGAVEIS.length - 1) {
       const proximo = CATALOGO_20_ENTREGAVEIS[idx + 1];
@@ -218,11 +224,11 @@ export default function Fase05Flow({
         </div>
         <h1 className="text-2xl font-bold text-white">Jornada Racional de Acompanhamento &amp; Retenção</h1>
         <p className="text-xs text-slate-400 leading-relaxed">
-          Configure a entrega do seu consultório na ordem cronológica de acolhimento do paciente. Selecione <strong>SIM</strong>, <strong>NÃO FAÇO, MAS QUERO FAZER</strong> ou <strong>NÃO</strong> para visualizar a carga horária e a retenção ao vivo.
+          Defina a quantidade de entregas diretamente dentro de cada produto do Eixo 04. Selecione <strong>SIM</strong>, <strong>NÃO FAÇO, MAS QUERO FAZER</strong> ou <strong>NÃO</strong> para visualizar a carga horária ao vivo.
         </p>
       </div>
 
-      {/* ── ETAPA 1: 🚀 BOAS-VINDAS & ONBOARDING (A PRIMEIRA IMPRESSÃO) ── */}
+      {/* ── ETAPA 1: 🚀 BOAS-VINDAS & ONBOARDING ── */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-xl">
         <div>
           <h2 className="text-sm font-bold text-white flex items-center gap-2">
@@ -233,13 +239,12 @@ export default function Fase05Flow({
             Mapeie o alinhamento pós-venda, envio de aplicativos e boas-vindas do paciente.
           </p>
         </div>
-
         <div className="space-y-3">
           {entregaveisPorEtapa['1_onboarding'].map((item) => renderCardEntregavel(item))}
         </div>
       </div>
 
-      {/* ── ETAPA 2: 🍏 ACOMPANHAMENTO TÉCNICO DIÁRIO (DIETA & SUPORTE) ── */}
+      {/* ── ETAPA 2: 🍏 ACOMPANHAMENTO TÉCNICO DIÁRIO ── */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-xl">
         <div>
           <h2 className="text-sm font-bold text-white flex items-center gap-2">
@@ -250,7 +255,6 @@ export default function Fase05Flow({
             Check-ins, biofeedback, cardápios flexíveis, exames e respostas rápidas no WhatsApp.
           </p>
         </div>
-
         <div className="space-y-3">
           {entregaveisPorEtapa['2_acompanhamento_diario'].map((item) => renderCardEntregavel(item))}
         </div>
@@ -267,7 +271,6 @@ export default function Fase05Flow({
             O sentimento de pertencimento a um grupo mantém o paciente ativo mesmo quando atrasa a dieta.
           </p>
         </div>
-
         <div className="space-y-3">
           {entregaveisPorEtapa['3_comunidade'].map((item) => renderCardEntregavel(item))}
         </div>
@@ -312,7 +315,6 @@ export default function Fase05Flow({
                     <span className="text-[10px] text-indigo-300 block font-semibold">💡 Insight: {rito.insightDisruptivo}</span>
                   </div>
 
-                  {/* 3 Botões de Escolha */}
                   <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                     <button
                       type="button"
@@ -362,7 +364,6 @@ export default function Fase05Flow({
                   </div>
                 </div>
 
-                {/* Bloco Expandido */}
                 {eAtivo && isExpandido && (
                   <div className="p-4 bg-slate-900/60 border-t border-slate-800/80 space-y-4 text-xs animate-fade-in">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -447,7 +448,7 @@ export default function Fase05Flow({
         </div>
       </div>
 
-      {/* ── ETAPA 6: 📊 RITOS DE RENOVAÇÃO & PAINEL CONSOLIDADO (TRAVA ≤ 30%) ── */}
+      {/* ── ETAPA 6: 📊 RITOS DE RENOVAÇÃO & PAINEL CONSOLIDADO ── */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-xl">
         <div>
           <h2 className="text-sm font-bold text-white flex items-center gap-2">
@@ -474,11 +475,11 @@ export default function Fase05Flow({
 
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs font-semibold">
             <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
-              <span className="text-slate-400 block text-[11px]">Tempo por Paciente:</span>
+              <span className="text-slate-400 block text-[11px]">Tempo Ponderado por Paciente:</span>
               <span className="font-mono text-emerald-400 font-bold text-lg">
                 {analise.tempoTotalEntregaMinutosMensalPorPaciente} min / mês
               </span>
-              <span className="text-[10px] text-slate-500 block">Pelos entregáveis ativos</span>
+              <span className="text-[10px] text-slate-500 block">Pelo mix real de produtos</span>
             </div>
 
             <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-1">
@@ -545,7 +546,7 @@ export default function Fase05Flow({
     </div>
   );
 
-  // Helper para renderizar cada card dos 20 entregáveis
+  // Helper para renderizar cada card dos 20 entregáveis com a Mini-Tabela de Produtos do Eixo 04
   function renderCardEntregavel(item: typeof CATALOGO_20_ENTREGAVEIS[0]) {
     const est = estadoEntregaveis[item.id] || {
       status: 'sim',
@@ -558,8 +559,6 @@ export default function Fase05Flow({
 
     const isExpandido = itemExpandidoId === item.id;
     const eAtivo = est.status === 'sim' || est.status === 'nao_faco_quero_fazer';
-    const minMensalPaciente = eAtivo ? est.frequenciaMensal * est.duracaoMinutos : 0;
-    const horasMensalConsultorio = Number(((minMensalPaciente * pacientesEixo01Count) / 60).toFixed(1));
 
     return (
       <div
@@ -634,7 +633,6 @@ export default function Fase05Flow({
                 type="button"
                 onClick={() => setItemExpandidoId(isExpandido ? null : item.id)}
                 className="p-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg text-slate-400 hover:text-white transition-all cursor-pointer ml-1"
-                title={isExpandido ? 'Recolher detalhes' : 'Expandir detalhes'}
               >
                 {isExpandido ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </button>
@@ -642,101 +640,115 @@ export default function Fase05Flow({
           </div>
         </div>
 
-        {/* Bloco Expandido */}
+        {/* Bloco Expandido com a Mini-Tabela de Produtos do Eixo 04 */}
         {eAtivo && isExpandido && (
           <div className="p-4 bg-slate-900/60 border-t border-slate-800/80 space-y-4 text-xs animate-fade-in">
-            {/* Vínculo com Produtos Eixo 04 */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
                 <Layers className="h-3.5 w-3.5 text-indigo-400" />
-                Em quais produtos / serviços do Eixo 04 você realiza esta entrega?
+                Matriz de Quantidade de Entregas por Produto do Eixo 04:
               </label>
-              <div className="flex flex-wrap gap-2 pt-1">
-                {listaServicos.map((s) => {
-                  const marcado = est.servicosEixo04Ids.includes(s.id);
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => handleProdutoToggle(item.id, s.id)}
-                      className={`px-3 py-1.5 rounded-lg border font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                        marcado
-                          ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-200'
-                          : 'bg-slate-950 border-slate-800 text-slate-400 hover:border-slate-700'
-                      }`}
-                    >
-                      <span className="text-[10px]">{marcado ? '☑️' : '⏹️'}</span>
-                      <span>{s.nome}</span>
-                    </button>
-                  );
-                })}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse bg-slate-950 rounded-xl overflow-hidden border border-slate-800">
+                  <thead>
+                    <tr className="border-b border-slate-800 text-[10px] uppercase font-bold text-slate-400 bg-slate-900/80">
+                      <th className="p-2.5">Produto do Eixo 04</th>
+                      <th className="p-2.5 text-center">Ativo?</th>
+                      <th className="p-2.5 text-center">Qtd no Contrato</th>
+                      <th className="p-2.5 text-center">Duração (Min)</th>
+                      <th className="p-2.5 text-right">Total no Ciclo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 text-xs font-medium">
+                    {listaServicos.map((s) => {
+                      const cfg = est.configPorProduto?.[s.id] || {
+                        ativo: true,
+                        quantidadeNoContrato: s.duracaoMeses * item.frequenciaPadraoMensal,
+                        duracaoMinutos: item.duracaoMinutosPadrao,
+                      };
+                      const totalMin = cfg.ativo ? cfg.quantidadeNoContrato * cfg.duracaoMinutos : 0;
+
+                      return (
+                        <tr key={s.id} className="hover:bg-slate-900/50 transition-all">
+                          <td className="p-2.5 font-bold text-white flex items-center gap-2">
+                            <span>🏷️ {s.nome}</span>
+                            <span className="text-[10px] text-slate-400 font-normal">({s.duracaoMeses}m)</span>
+                          </td>
+                          <td className="p-2.5 text-center">
+                            <input
+                              type="checkbox"
+                              checked={cfg.ativo}
+                              onChange={(e) =>
+                                handleConfigProdutoChange(item.id, s.id, { ativo: e.target.checked })
+                              }
+                              className="h-3.5 w-3.5 rounded border-slate-700 text-indigo-500 focus:ring-0 cursor-pointer"
+                            />
+                          </td>
+                          <td className="p-2.5 text-center">
+                            <input
+                              type="number"
+                              min={1}
+                              disabled={!cfg.ativo}
+                              value={cfg.quantidadeNoContrato}
+                              onChange={(e) =>
+                                handleConfigProdutoChange(item.id, s.id, {
+                                  quantidadeNoContrato: parseInt(e.target.value, 10) || 1,
+                                })
+                              }
+                              className="w-16 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-emerald-400 font-bold text-center focus:border-emerald-500 disabled:opacity-40"
+                            />
+                          </td>
+                          <td className="p-2.5 text-center">
+                            <input
+                              type="number"
+                              min={1}
+                              disabled={!cfg.ativo}
+                              value={cfg.duracaoMinutos}
+                              onChange={(e) =>
+                                handleConfigProdutoChange(item.id, s.id, {
+                                  duracaoMinutos: parseInt(e.target.value, 10) || 1,
+                                })
+                              }
+                              className="w-16 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-amber-400 font-bold text-center focus:border-emerald-500 disabled:opacity-40"
+                            />
+                          </td>
+                          <td className="p-2.5 text-right font-mono font-bold">
+                            {cfg.ativo ? (
+                              <span className="text-emerald-400 text-xs">
+                                {totalMin} min ({(totalMin / 60).toFixed(1)}h)
+                              </span>
+                            ) : (
+                              <span className="text-slate-600 text-xs">Inativo</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            {/* Frequência, Tempo e Executor */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                  Quantas Vezes no Mês? (Frequência):
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={1}
-                    value={est.frequenciaMensal}
-                    onChange={(e) => handleEntregavelPatch(item.id, { frequenciaMensal: parseInt(e.target.value, 10) || 1 })}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-emerald-400 font-bold text-right focus:border-emerald-500"
-                  />
-                  <span className="text-[10px] text-slate-400 shrink-0">x / mês</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                  Tempo por Atendimento (Minutos):
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={1}
-                    value={est.duracaoMinutos}
-                    onChange={(e) => handleEntregavelPatch(item.id, { duracaoMinutos: parseInt(e.target.value, 10) || 1 })}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-amber-400 font-bold text-right focus:border-emerald-500"
-                  />
-                  <span className="text-[10px] text-slate-400 shrink-0">min / entrega</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
-                  Executor Principal:
-                </label>
+            {/* Executor e Botão Concluir & Próximo */}
+            <div className="flex items-center justify-between flex-wrap gap-3 pt-1 border-t border-slate-800/60">
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-bold text-slate-400 uppercase shrink-0">Executor Principal:</label>
                 <select
                   value={est.executor}
                   onChange={(e) => handleEntregavelPatch(item.id, { executor: e.target.value as ExecutorEntregavel })}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-white font-semibold focus:border-emerald-500"
+                  className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 text-xs text-white font-semibold focus:border-emerald-500"
                 >
                   <option value="expert">👤 Nutricionista Principal (Expert)</option>
                   <option value="equipe">👥 Equipe de Apoio (Nutrianjos/Secretária)</option>
                   <option value="sistema">🤖 Sistema / App Automático</option>
                 </select>
               </div>
-            </div>
-
-            {/* ⚡ CÁLCULO AO VIVO & BOTÃO CONCLUIR E PRÓXIMO */}
-            <div className="p-3 rounded-xl bg-slate-950 border border-indigo-500/30 flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2 text-indigo-300 font-bold text-[11px]">
-                <Calculator className="h-4 w-4 text-indigo-400 shrink-0" />
-                <span>⚡ Cálculo Ao Vivo:</span>
-                <span className="font-mono text-emerald-400 font-bold">
-                  {est.frequenciaMensal}x/mês × {est.duracaoMinutos}min = {minMensalPaciente} min/paciente ({horasMensalConsultorio}h/mês total)
-                </span>
-              </div>
 
               <button
                 type="button"
                 onClick={() => handleConcluirEProximo(item.id)}
-                className="px-3 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-slate-950 font-extrabold rounded-lg text-[11px] transition-all cursor-pointer flex items-center gap-1.5 shadow-md"
+                className="px-3.5 py-1.5 bg-indigo-500 hover:bg-indigo-400 text-slate-950 font-extrabold rounded-lg text-[11px] transition-all cursor-pointer flex items-center gap-1.5 shadow-md"
               >
                 <span>Concluir &amp; Próximo</span>
                 <ArrowRight className="h-3.5 w-3.5" />
