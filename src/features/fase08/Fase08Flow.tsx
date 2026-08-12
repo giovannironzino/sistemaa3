@@ -64,7 +64,10 @@ export default function Fase08Flow({
     ];
   });
 
-  // Form de Nova Linha Livre de Despesa Fixa
+  // State do Benchmarking Opcional da Concorrência
+  const [precosConcorrenciaOverride, setPrecosConcorrenciaOverride] = useState<Record<string, number>>(() => {
+    return initialState?.precosConcorrenciaOverride || {};
+  });
   const [descricaoNova, setDescricaoNova] = useState('');
   const [valorNovo, setValorNovo] = useState('');
   const [categoriaNova, setCategoriaNova] = useState<DespesaFixaItem['categoria']>('estrutura');
@@ -91,8 +94,8 @@ export default function Fase08Flow({
   }, [despesas, faturamentoOverride, pacientesEixo01Count, insumosPorConsultaInput, proLaboreInput, historico12MesesState]);
 
   const precificacao = useMemo(() => {
-    return calcularPrecificacaoServicos(servicosEixo04, dre.despesasFixasTotaisMensais, 120);
-  }, [servicosEixo04, dre.despesasFixasTotaisMensais]);
+    return calcularPrecificacaoServicos(servicosEixo04, dre.despesasFixasTotaisMensais, 120, precosConcorrenciaOverride);
+  }, [servicosEixo04, dre.despesasFixasTotaisMensais, precosConcorrenciaOverride]);
 
   function handleFormaPagamentoChange(pacienteId: string, forma: FormaPagamentoPaciente, parcelas: number = 1, antecipado: boolean = false) {
     setFormasPagamentoOverride((prev) => ({
@@ -109,6 +112,13 @@ export default function Fase08Flow({
         [pacienteId]: { ...atual, antecipado },
       };
     });
+  }
+
+  function handleConcorrenciaPrecoChange(servicoId: string, valor: number) {
+    setPrecosConcorrenciaOverride((prev) => ({
+      ...prev,
+      [servicoId]: Math.max(0, valor),
+    }));
   }
 
   function handleAdicionarDespesa(e: React.FormEvent) {
@@ -636,11 +646,12 @@ export default function Fase08Flow({
             <thead>
               <tr className="border-b border-slate-800 bg-slate-950 text-[10px] uppercase font-bold text-slate-400">
                 <th className="p-3">Serviço Cadastrado (Eixo 04)</th>
-                <th className="p-3">Preço de Tabela</th>
-                <th className="p-3 text-center">Tempo Total (Horas)</th>
-                <th className="p-3 text-center">Custo Direto Total</th>
+                <th className="p-3">Seu Preço Atual</th>
+                <th className="p-3 text-center text-indigo-300">⚔️ Concorrência (Opcional)</th>
+                <th className="p-3 text-center">Tempo (Horas)</th>
+                <th className="p-3 text-center">Custo Direto</th>
                 <th className="p-3 text-right">Lucro Real / Margem</th>
-                <th className="p-3 text-right">Piso Recomendado</th>
+                <th className="p-3 text-right text-emerald-400">Piso Sugerido</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 text-xs font-medium">
@@ -648,21 +659,53 @@ export default function Fase08Flow({
                 <tr key={item.id} className="hover:bg-slate-800/40 transition-all">
                   <td className="p-3 font-bold text-white">
                     {item.nomeServico}
-                    {item.statusMargem === 'prejuizo_oculto' && (
-                      <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-bold bg-red-500/20 text-red-300 border border-red-500/30">
-                        ⚠️ Prejuízo Oculto
+                    {item.statusMargem === 'estrategico_subsidio' && (
+                      <span className="ml-2 px-2 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        💡 Subsídio Estratégico
+                      </span>
+                    )}
+                    {item.statusPosicionamentoMercado && (
+                      <span
+                        className={`ml-2 px-2 py-0.5 rounded text-[9px] font-bold border ${
+                          item.statusPosicionamentoMercado === 'subprecificado'
+                            ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                            : item.statusPosicionamentoMercado === 'premium'
+                            ? 'bg-purple-500/10 text-purple-300 border-purple-500/30'
+                            : 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30'
+                        }`}
+                      >
+                        {item.statusPosicionamentoMercado === 'subprecificado'
+                          ? 'Abaixo do Mercado'
+                          : item.statusPosicionamentoMercado === 'premium'
+                          ? 'Posicionamento Premium'
+                          : 'Alinhado ao Mercado'}
                       </span>
                     )}
                   </td>
                   <td className="p-3 text-emerald-400 font-mono font-bold">R$ {item.precoTabela}</td>
+                  <td className="p-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      <span className="text-[10px] text-slate-500">R$</span>
+                      <input
+                        type="number"
+                        min={0}
+                        value={item.precoConcorrenciaDireta || ''}
+                        onChange={(e) =>
+                          handleConcorrenciaPrecoChange(item.id, parseFloat(e.target.value) || 0)
+                        }
+                        placeholder="Opcional"
+                        className="w-24 bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-indigo-300 font-bold text-center focus:border-indigo-500"
+                      />
+                    </div>
+                  </td>
                   <td className="p-3 text-center text-slate-300">{item.horasDedicadasTotal}h</td>
                   <td className="p-3 text-center text-red-400 font-mono">R$ {item.custoDiretoTotal}</td>
                   <td className="p-3 text-right font-mono font-bold">
-                    <span className={item.lucroLiquidoReal < 0 ? 'text-red-400' : 'text-emerald-400'}>
+                    <span className={item.lucroLiquidoReal < 0 ? 'text-amber-400' : 'text-emerald-400'}>
                       R$ {item.lucroLiquidoReal} ({item.margemLucroPercentual}%)
                     </span>
                   </td>
-                  <td className="p-3 text-right text-indigo-300 font-mono font-bold">
+                  <td className="p-3 text-right text-emerald-400 font-mono font-bold">
                     R$ {item.pisoMinimoRecomendado}
                   </td>
                 </tr>
@@ -670,6 +713,24 @@ export default function Fase08Flow({
             </tbody>
           </table>
         </div>
+
+        {/* Alertas Científicos Informativos em Linguagem Simples (Sem Bloqueios) */}
+        {precificacao.serviciosDetalhados
+          .filter((item) => item.alertaCientificoNeutro)
+          .map((item) => (
+            <div
+              key={`alerta_${item.id}`}
+              className="p-3.5 bg-indigo-500/10 border border-indigo-500/30 rounded-xl space-y-1 text-xs animate-fade-in"
+            >
+              <div className="flex items-center gap-2 text-indigo-300 font-bold">
+                <Sparkles className="h-4 w-4 shrink-0" />
+                <span>Análise de Margem &amp; Estratégia Comercial: {item.nomeServico}</span>
+              </div>
+              <p className="text-slate-300 text-[11px] leading-relaxed">
+                {item.alertaCientificoNeutro}
+              </p>
+            </div>
+          ))}
       </div>
 
       {/* ── BLOCO OPCIONAL: 📅 MAPEAMENTO DOS ÚLTIMOS 12 MESES (COLLAPSIBLE) ── */}
