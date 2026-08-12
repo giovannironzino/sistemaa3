@@ -162,13 +162,14 @@ function simularProcessamentoCesta(
 
   const itens: ItemCestaExtraido[] = [];
 
-  if (temProntuario || arquivos.length === 0) {
+  // Apenas gera itens de demonstração se nenhum arquivo real foi enviado
+  if (arquivos.length === 0) {
     itens.push(
       {
         id: 'cesta_1',
         origemColhedor: 'colhedor01_prontuario',
         tipo: 'paciente',
-        nome: 'Mariana Silva (via WebDiet)',
+        nome: 'Mariana Silva (Exemplo)',
         mesAtendimento: 'mesM0',
         dorId: 'estetica_emagrecimento',
         canalOrigem: 'instagram_organico',
@@ -181,7 +182,7 @@ function simularProcessamentoCesta(
         id: 'cesta_2',
         origemColhedor: 'colhedor01_prontuario',
         tipo: 'paciente',
-        nome: 'Carlos Eduardo (via WebDiet)',
+        nome: 'Carlos Eduardo (Exemplo)',
         mesAtendimento: 'mesM1',
         dorId: 'comportamento_alimentar',
         canalOrigem: 'indicacao_boca_a_boca',
