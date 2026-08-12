@@ -1,0 +1,120 @@
+// calcularRetencaoECarga.ts
+// Motor de Cálculo de Carga Horária de Entrega Técnica e Score de Retenção Efetiva com Trava Rigorosa em 30%.
+
+import { CATALOGO_20_ENTREGAVEIS, CATALOGO_RITOS_RETENCAO_CS, ExecutorEntregavel } from '../catalogo20Entregaveis';
+
+export interface EstadoEntregavelItem {
+  ativo: boolean;
+  servicosEixo04Ids: string[]; // Em quais produtos/serviços do Eixo 04 se aplica
+  tipoEntrega: 'padrao' | 'personalizada';
+  frequenciaMensal: number;
+  duracaoMinutos: number;
+  executor: ExecutorEntregavel;
+}
+
+export interface EstadoRitoRetencaoItem {
+  pratica: boolean; // Resposta SIM / NÃO
+  servicosEixo04Ids: string[];
+  frequenciaMensal: number;
+  duracaoMinutos: number;
+  executor: ExecutorEntregavel;
+}
+
+export interface ResultadoRetencaoECarga {
+  tempoTotalEntregaMinutosMensalPorPaciente: number;
+  tempoTotalEntregaHorasMensalConsultorio: number;
+  scoreEstruturaRetencaoPercentual: number; // Trava algorítmica rigorosa em no máximo 30%
+  taxaRetencaoEfetivaPercentual: number; // Renovação Histórica Real (Eixo 01) + Score de Estrutura (máx 30%)
+  custoInsumosFisicosMensalPorPaciente: number;
+  tarefasDelegadasEquipeCount: number;
+  tarefasExpertCount: number;
+  temComunidadeAtiva: boolean;
+  temDesafio21Dias: boolean;
+}
+
+export function calcularRetencaoECarga(
+  estadoEntregaveis: Record<string, EstadoEntregavelItem>,
+  estadoRitos: Record<string, EstadoRitoRetencaoItem>,
+  pacientesAtivosCount: number = 38,
+  taxaRenovacaoHistoricaBase: number = 55 // Do Eixo 01 (pacientes com 2+ ciclos)
+): ResultadoRetencaoECarga {
+  let minutosTotaisPaciente = 0;
+  let pontosEstruturaBrutos = 0;
+  let custoInsumosPaciente = 0;
+  let tarefasEquipe = 0;
+  let tarefasExpert = 0;
+
+  // 1. Processa os 20 Entregáveis Clínicos
+  CATALOGO_20_ENTREGAVEIS.forEach((item) => {
+    const est = estadoEntregaveis[item.id] || {
+      ativo: true,
+      servicosEixo04Ids: [],
+      tipoEntrega: 'personalizada',
+      frequenciaMensal: item.frequenciaPadraoMensal,
+      duracaoMinutos: item.duracaoMinutosPadrao,
+      executor: item.executorDefault,
+    };
+
+    if (est.ativo) {
+      if (est.tipoEntrega === 'personalizada') {
+        const minMensal = est.frequenciaMensal * est.duracaoMinutos;
+        minutosTotaisPaciente += minMensal;
+      }
+      pontosEstruturaBrutos += 1.5; // Cada entregável ativo adiciona 1.5% ao score bruto
+      custoInsumosPaciente += item.custoInsumoFisicoPadrao;
+
+      if (est.executor === 'equipe') tarefasEquipe++;
+      if (est.executor === 'expert') tarefasExpert++;
+    }
+  });
+
+  // 2. Processa os Ritos de Retenção CS (SIM / NÃO)
+  let temComunidade = false;
+  let temDesafio = false;
+
+  CATALOGO_RITOS_RETENCAO_CS.forEach((rito) => {
+    const est = estadoRitos[rito.id] || {
+      pratica: false,
+      servicosEixo04Ids: [],
+      frequenciaMensal: rito.frequenciaPadraoMensal,
+      duracaoMinutos: rito.duracaoMinutosPadrao,
+      executor: rito.executorDefault,
+    };
+
+    if (est.pratica) {
+      const minMensal = est.frequenciaMensal * est.duracaoMinutos;
+      minutosTotaisPaciente += minMensal;
+      pontosEstruturaBrutos += 3.0; // Ritos de CS adicionam 3.0% ao score bruto
+
+      if (est.executor === 'equipe') tarefasEquipe++;
+      if (est.executor === 'expert') tarefasExpert++;
+    }
+  });
+
+  // 3. Aplica a TRAVA ALGORÍTMICA RIGOROSA DE NO MÁXIMO 30% no Score de Estrutura
+  const scoreEstruturaRetencaoPercentual = Number(
+    Math.min(30, pontosEstruturaBrutos).toFixed(1)
+  );
+
+  // 4. Calcula a Taxa de Retenção Efetiva (%): Renovação Real (Eixo 01) + Score Estrutura (máx 30%)
+  const taxaRetencaoEfetivaPercentual = Number(
+    Math.min(95, taxaRenovacaoHistoricaBase + scoreEstruturaRetencaoPercentual).toFixed(1)
+  );
+
+  // 5. Calcula Carga Horária Mensal Total do Consultório (horas)
+  const tempoTotalEntregaHorasMensalConsultorio = Number(
+    ((minutosTotaisPaciente * Math.max(1, pacientesAtivosCount)) / 60).toFixed(1)
+  );
+
+  return {
+    tempoTotalEntregaMinutosMensalPorPaciente: minutosTotaisPaciente,
+    tempoTotalEntregaHorasMensalConsultorio,
+    scoreEstruturaRetencaoPercentual,
+    taxaRetencaoEfetivaPercentual,
+    custoInsumosFisicosMensalPorPaciente: custoInsumosPaciente,
+    tarefasDelegadasEquipeCount: tarefasEquipe,
+    tarefasExpertCount: tarefasExpert,
+    temComunidadeAtiva: temComunidade,
+    temDesafio21Dias: temDesafio,
+  };
+}
