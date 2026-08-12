@@ -1,10 +1,14 @@
 // Fase06Flow.tsx
-// Módulo Eixo 06 — Agenda, Capacidade & Tempo (Disponibilidade Cronológica, Catálogo de 5 Drenos e Gradeador Tático)
+// Redesenho Completo do Eixo 06 — Agenda, Capacidade & Tempo (98% Mais Profundo).
+// 100% Analítico e Neutro (Sem Simuladores nem Dicas — Simulação Exclusiva do Eixo 09).
+// Incorpora: Microações em MINUTOS, Conversão Automática Minutos ➔ Horas, Mapeamento Nominal do Passivo de Tempo Futuro (Eixo 01 ➔ 04 ➔ 05 ➔ 06).
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Calendar, Clock, AlertTriangle, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react';
+import { Calendar, Clock, AlertTriangle, CheckCircle2, ArrowRight, Sparkles, User, FileText, PackageCheck, Layers } from 'lucide-react';
+import { DOMINIOS_TATICOS_AGENDA } from './catalogoMicroacoesAgenda';
+import { calcularTempoFuturoComprometido } from './lib/calcularTempoFuturoComprometido';
 
 export const DIAS_SEMANA_ORDENADOS = [
   'Segunda',
@@ -16,28 +20,15 @@ export const DIAS_SEMANA_ORDENADOS = [
   'Domingo',
 ] as const;
 
-export const CATALOGO_DRENOS_TEMPO = [
-  'Montagem Manual e Centralizada de Cardápios (Digitação de Dietas)',
-  'Suporte Operacional Centralizado e Sem Triagem (WhatsApp Livre)',
-  'Burocracia de Onboarding, Agendamentos e Cobranças de Forma Solta',
-  'Produção Diária e Desorganizada de Conteúdo',
-  'Interrupções Constantes e o clássico "Tem um minutinho?"',
-  'Anotações Manuais e Redação de Prontuários Durante a Consulta',
-  'Condução Integral de Avaliações Físicas e Triagens Longas',
-  '"Centralismo do Faz-Tudo" (Falta de Delegação Geral)',
-  'Atendimento Online Sem Limites de Horário (Suporte 24h)',
-  'Dependência de Vender Consultas Avulsas (Zerar o Caixa Todo Mês)',
-  'Outros',
-] as const;
-
 interface Fase06FlowProps {
   uid: string;
   initialState?: any;
+  pacientesEixo01?: Array<{ id: string; nome: string; ticketPagoEstimado?: number; mesAtendimento?: string }>;
   onAvancarEixo07?: () => void;
 }
 
-export default function Fase06Flow({ uid, initialState, onAvancarEixo07 }: Fase06FlowProps) {
-  // 1. Disponibilidade por dia na ordem cronológica estrita da semana
+export default function Fase06Flow({ uid, initialState, pacientesEixo01 = [], onAvancarEixo07 }: Fase06FlowProps) {
+  // 1. Matriz de Horas por Dia na Ordem Cronológica Estrita
   const [horasPorDia, setHorasPorDia] = useState<Record<string, number>>(() => {
     const init = initialState?.horasPorDia || {};
     return {
@@ -51,56 +42,95 @@ export default function Fase06Flow({ uid, initialState, onAvancarEixo07 }: Fase0
     };
   });
 
-  // 2. Os 5 Drenos de Tempo selecionados da lista padronizada
-  const [drenosSelecionados, setDrenosSelecionados] = useState<string[]>(() => {
-    if (Array.isArray(initialState?.drenos) && initialState.drenos.length === 5) {
-      return initialState.drenos;
-    }
-    return [
-      'Montagem Manual e Centralizada de Cardápios (Digitação de Dietas)',
-      'Suporte Operacional Centralizado e Sem Triagem (WhatsApp Livre)',
-      'Burocracia de Onboarding, Agendamentos e Cobranças de Forma Solta',
-      'Interrupções Constantes e o clássico "Tem um minutinho?"',
-      'Outros',
-    ];
+  // 2. Microações em MINUTOS (Estado de cada microação)
+  const [microAcoesEstado, setMicroAcoesEstado] = useState<
+    Record<string, { realiza: boolean; duracaoMinutos: number; ocorrenciasPorSemana: number }>
+  >(() => {
+    const init: Record<string, { realiza: boolean; duracaoMinutos: number; ocorrenciasPorSemana: number }> = {};
+    DOMINIOS_TATICOS_AGENDA.forEach((dom) => {
+      dom.microAcoes.forEach((act) => {
+        const salvo = initialState?.microAcoesEstado?.[act.id];
+        init[act.id] = {
+          realiza: salvo?.realiza ?? true,
+          duracaoMinutos: salvo?.duracaoMinutos ?? act.duracaoMinutosPadrao,
+          ocorrenciasPorSemana: salvo?.ocorrenciasPorSemana ?? act.ocorrenciasPorSemanaPadrao,
+        };
+      });
+    });
+    return init;
   });
-
-  // Texto livre para quando o usuário seleciona 'Outros'
-  const [drenoOutrosTexto, setDrenoOutrosTexto] = useState<string>(
-    initialState?.drenoOutrosTexto ?? 'Mensagens soltas e dúvidas operacionais fora do horário de consulta'
-  );
 
   const [salvo, setSalvo] = useState(false);
 
-  // Cálculos de Carga Horária
+  // Cálculos de Carga Horária Bruta da Semana (Soma Cronológica)
   const totalHorasSemana: number = Number(
     DIAS_SEMANA_ORDENADOS.reduce((acc, dia) => acc + (Number(horasPorDia[dia]) || 0), 0)
   );
 
-  // Dedução de tempo de Vendas/Gestão (~25% da carga horária)
-  const horasVendasGestaoSemana: number = Math.round(totalHorasSemana * 0.25);
-  const horasClinicasLiquidasSemana: number = Math.max(0, totalHorasSemana - horasVendasGestaoSemana);
+  // Cálculo do tempo em Horas por Domínio a partir dos MINUTOS informados pelo usuário
+  const horasPorDominio = useMemo(() => {
+    const res: Record<string, number> = {
+      tecnico: 0,
+      comercial: 0,
+      gestao: 0,
+      marketing: 0,
+      financeiro: 0,
+      autocuidado: 0,
+    };
+
+    DOMINIOS_TATICOS_AGENDA.forEach((dom) => {
+      let minSemanaDominio = 0;
+      dom.microAcoes.forEach((act) => {
+        const est = microAcoesEstado[act.id];
+        if (est && est.realiza) {
+          minSemanaDominio += est.duracaoMinutos * est.ocorrenciasPorSemana;
+        }
+      });
+      res[dom.id] = Number((minSemanaDominio / 60).toFixed(1));
+    });
+
+    return res;
+  }, [microAcoesEstado]);
+
+  // Cálculo Nominal do Tempo Futuro Comprometido (Encadeamento Eixo 01 ➔ 04 ➔ 05 ➔ 06)
+  const calculoPassivoFuturo = useMemo(() => {
+    return calcularTempoFuturoComprometido(pacientesEixo01, horasPorDominio.tecnico || 30);
+  }, [pacientesEixo01, horasPorDominio.tecnico]);
 
   function handleHorasChange(dia: string, val: number) {
     setHorasPorDia((prev) => ({ ...prev, [dia]: Math.max(0, val) }));
   }
 
-  function handleDrenoSelect(index: number, opcao: string) {
-    setDrenosSelecionados((prev) => {
-      const next = [...prev];
-      next[index] = opcao;
-      return next;
-    });
+  function handleMicroAcaoToggle(id: string) {
+    setMicroAcoesEstado((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        realiza: !prev[id].realiza,
+      },
+    }));
+  }
+
+  function handleMicroAcaoMinutosChange(id: string, minutos: number) {
+    setMicroAcoesEstado((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        duracaoMinutos: Math.max(0, minutos),
+      },
+    }));
   }
 
   async function handleSalvar() {
     try {
       const data = {
         horasPorDia,
-        drenos: drenosSelecionados,
-        drenoOutrosTexto,
+        microAcoesEstado,
+        horasPorDominio,
         totalHorasSemana,
-        horasClinicasLiquidasSemana,
+        totalHorasFuturasComprometidas: calculoPassivoFuturo.totalHorasSemanaComprometidas,
+        tetoFisicoPacientes: calculoPassivoFuturo.tetoFisicoPacientes,
+        janelaLivreHorasSemana: calculoPassivoFuturo.janelaLivreHorasSemana,
         fase06Completa: true,
         atualizadoEm: new Date().toISOString(),
       };
@@ -117,7 +147,7 @@ export default function Fase06Flow({ uid, initialState, onAvancarEixo07 }: Fase0
   }
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-8 py-6 animate-fade-in">
+    <div className="w-full max-w-5xl mx-auto space-y-8 py-6 animate-fade-in">
       {/* Header */}
       <div className="space-y-2 border-b border-slate-800 pb-4">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
@@ -126,20 +156,20 @@ export default function Fase06Flow({ uid, initialState, onAvancarEixo07 }: Fase0
             Eixo 06 · Agenda, Capacidade &amp; Tempo
           </span>
         </div>
-        <h1 className="text-2xl font-bold text-white">Quanto tempo real você tem para a clínica?</h1>
+        <h1 className="text-2xl font-bold text-white">Mapeamento de Carga Horária &amp; Passivo Técnico de Tempo</h1>
         <p className="text-xs text-slate-400 leading-relaxed">
-          Mapeie sua disponibilidade semanal cronológica e selecione os 5 drenos invisíveis que devoram sua produtividade.
+          Informe o seu tempo em minutos nas microações cotidianas. O Sistema A3 calcula a conversão em horas e apresenta o rastreamento nominal do tempo futuro comprometido com sua base ativa.
         </p>
       </div>
 
-      {/* 1. GRID CRONOLÓGICO DE DISPONIBILIDADE SEMANAL */}
+      {/* ── SEÇÃO 1: MATRIZ DE HORAS POR DIA DA SEMANA (ORDEM CRONOLÓGICA) ── */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2">
           <Calendar className="h-4 w-4 text-emerald-400" />
-          1. Disponibilidade de Horas Brutas por Dia da Semana (Ordem Cronológica):
-        </h3>
+          1. Disponibilidade de Horas Brutas por Dia da Semana (Segunda a Domingo)
+        </h2>
         <p className="text-xs text-slate-400">
-          Informe quantas horas brutas por dia você dedica à sua prática clínica de Segunda a Domingo.
+          Informe quantas horas por dia você destina à operação da clínica de Segunda a Domingo.
         </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-7 gap-3">
@@ -159,111 +189,223 @@ export default function Fase06Flow({ uid, initialState, onAvancarEixo07 }: Fase0
           ))}
         </div>
 
-        {/* Resumo de Horas */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-3">
-          <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-center space-y-0.5">
-            <span className="text-[10px] text-slate-400 font-bold uppercase">Carga Bruta Semanal</span>
-            <p className="text-lg font-extrabold text-white">{totalHorasSemana}h / semana</p>
-          </div>
-          <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-center space-y-0.5">
-            <span className="text-[10px] text-slate-400 font-bold uppercase">Dedução Vendas &amp; Gestão (25%)</span>
-            <p className="text-lg font-extrabold text-amber-400">-{horasVendasGestaoSemana}h / semana</p>
-          </div>
-          <div className="bg-emerald-500/10 border border-emerald-500/30 p-3.5 rounded-xl text-center space-y-0.5">
-            <span className="text-[10px] text-emerald-400 font-bold uppercase">Capacidade Clínica Líquida</span>
-            <p className="text-lg font-extrabold text-emerald-400">{horasClinicasLiquidasSemana}h / semana</p>
-          </div>
+        <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-300">Carga Bruta Semanal Cadastrada:</span>
+          <span className="text-sm font-extrabold text-white font-mono">{totalHorasSemana}h / semana</span>
         </div>
       </div>
 
-      {/* 2. OS 5 DRENOS DE TEMPO SELECIONÁVEIS */}
-      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+      {/* ── SEÇÃO 2: DECOMPOSIÇÃO NOS 06 DOMÍNIOS POR MICROAÇÕES EM MINUTOS ── */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-6 shadow-xl">
         <div>
-          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-400" />
-            2. Os 05 Drenos de Tempo a Eliminar na sua Rotina:
-          </h3>
+          <h2 className="text-sm font-bold text-white flex items-center gap-2">
+            <Clock className="h-4 w-4 text-emerald-400" />
+            2. Decomposição da Rotina nos 06 Domínios Táticos (Duração em MINUTOS)
+          </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Selecione até 5 maiores gargalos da lista padronizada abaixo. Se selecionar &quot;Outros&quot;, digite a sua rotina específica.
+            Informe quanto tempo em <strong>minutos</strong> você dedica a cada microação. As tags indicam os dados resgatados automaticamente dos Eixos anteriores.
           </p>
         </div>
 
-        <div className="space-y-3.5">
-          {Array.from({ length: 5 }).map((_, idx) => {
-            const drenoAtual = drenosSelecionados[idx] || CATALOGO_DRENOS_TEMPO[idx] || 'Outros';
-            const isOutros = drenoAtual === 'Outros';
-
+        <div className="space-y-6">
+          {DOMINIOS_TATICOS_AGENDA.map((dom) => {
+            const horasCalc = horasPorDominio[dom.id] || 0;
             return (
-              <div key={idx} className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center justify-center h-6 w-6 rounded-full bg-amber-500/20 text-amber-300 text-xs font-bold shrink-0">
-                    {idx + 1}
+              <div key={dom.id} className="bg-slate-950 border border-slate-800 rounded-2xl p-4 space-y-4">
+                {/* Header do Domínio */}
+                <div className="flex items-center justify-between border-b border-slate-800 pb-3 flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{dom.icone}</span>
+                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">{dom.titulo}</h3>
+                  </div>
+                  <span className="px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-xs font-bold font-mono text-emerald-400">
+                    Calculado: {horasCalc}h / semana
                   </span>
-                  <select
-                    value={drenoAtual}
-                    onChange={(e) => handleDrenoSelect(idx, e.target.value)}
-                    className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white font-semibold focus:border-emerald-500 focus:outline-none"
-                  >
-                    {CATALOGO_DRENOS_TEMPO.map((opcao) => (
-                      <option key={opcao} value={opcao}>
-                        {opcao}
-                      </option>
-                    ))}
-                  </select>
                 </div>
 
-                {/* Campo de Texto Livre se for 'Outros' */}
-                {isOutros && (
-                  <div className="pl-9">
-                    <label className="text-[10px] font-bold text-amber-400 uppercase block mb-1">
-                      Descreva o seu Dreno de Tempo Específico:
-                    </label>
-                    <input
-                      type="text"
-                      value={drenoOutrosTexto}
-                      onChange={(e) => setDrenoOutrosTexto(e.target.value)}
-                      placeholder="Ex: Mensagens soltas no WhatsApp fora de hora..."
-                      className="w-full bg-slate-900 border border-amber-500/40 rounded-xl px-3 py-2 text-xs text-white font-medium focus:border-amber-400 focus:outline-none"
-                    />
-                  </div>
-                )}
+                {/* Lista de Microações em Minutos */}
+                <div className="space-y-3">
+                  {dom.microAcoes.map((act) => {
+                    const est = microAcoesEstado[act.id] || {
+                      realiza: true,
+                      duracaoMinutos: act.duracaoMinutosPadrao,
+                      ocorrenciasPorSemana: act.ocorrenciasPorSemanaPadrao,
+                    };
+
+                    return (
+                      <div
+                        key={act.id}
+                        className={`p-3.5 rounded-xl border transition-all space-y-2 ${
+                          est.realiza
+                            ? 'bg-slate-900/90 border-slate-800 hover:border-slate-700'
+                            : 'bg-slate-950/50 border-slate-900 opacity-60'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="checkbox"
+                              checked={est.realiza}
+                              onChange={() => handleMicroAcaoToggle(act.id)}
+                              className="h-4 w-4 rounded bg-slate-800 border-slate-700 text-emerald-500 focus:ring-0 cursor-pointer"
+                            />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-white">{act.titulo}</span>
+                                {act.eixoOrigem && (
+                                  <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                                    💡 Resgatado do {act.eixoOrigem}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-400">{act.descricao}</p>
+                            </div>
+                          </div>
+
+                          {est.realiza && (
+                            <div className="flex items-center gap-2">
+                              <label className="text-[10px] font-bold text-slate-400 uppercase">Tempo médio:</label>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={est.duracaoMinutos}
+                                  onChange={(e) =>
+                                    handleMicroAcaoMinutosChange(act.id, parseInt(e.target.value, 10) || 0)
+                                  }
+                                  className="w-16 bg-slate-950 border border-slate-800 rounded-lg py-1 px-2 text-center text-xs font-bold text-emerald-400 focus:border-emerald-500"
+                                />
+                                <span className="text-xs font-semibold text-slate-400">minutos</span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* 3. GRADEADOR TÁTICO DE AGENDA FIXA */}
+      {/* ── SEÇÃO 3: TABELA DE PASSIVO DE TEMPO FUTURO COMPROMETIDO (NOMINAL) ── */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-        <h3 className="text-sm font-bold text-white flex items-center gap-2">
-          <Clock className="h-4 w-4 text-emerald-400" />
-          3. Previsão de Agenda Fixa (Alocação das Entregas Pendentes do Eixo 05)
-        </h3>
-        <p className="text-xs text-slate-400 leading-relaxed">
-          Com base nos acompanhamentos e retornos pendentes mapeados no Eixo 05, veja a alocação necessária na sua grade semanal para honrar os compromissos com seus pacientes ativos.
-        </p>
-
-        <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
-          <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
-            <span className="text-slate-300 font-semibold">Horas Clínicas Líquidas Disponíveis:</span>
-            <span className="font-bold text-emerald-400">{horasClinicasLiquidasSemana}h / semana</span>
+        <div>
+          <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 mb-1">
+            <Layers className="h-3 w-3 text-amber-400" />
+            <span className="text-[10px] font-bold text-amber-400 uppercase">Encadeamento Nominal · Eixos 01 ➔ 04 ➔ 05 ➔ 06</span>
           </div>
+          <h2 className="text-sm font-bold text-white flex items-center gap-2">
+            3. Rastreamento Nominal do Tempo Futuro Comprometido com a Base Ativa
+          </h2>
+          <p className="text-xs text-slate-400 mt-1">
+            Cruza quem são seus pacientes ativos (Eixo 01), os serviços contratados (Eixo 04) e os entregáveis (Eixo 05) para metrificar o tempo exato comprometido na sua agenda.
+          </p>
+        </div>
 
-          <div className="flex items-center justify-between text-xs border-b border-slate-800 pb-2">
-            <span className="text-slate-300 font-semibold">Horas Comprometidas com Pacientes Vigentes (Retornos/Entregas):</span>
-            <span className="font-bold text-amber-400">~{Math.round(horasClinicasLiquidasSemana * 0.6)}h / semana</span>
+        {/* Tabela Nominal */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-800 bg-slate-950 text-[10px] uppercase font-bold text-slate-400">
+                <th className="p-3">Paciente Ativo (Eixo 01)</th>
+                <th className="p-3">Serviço Contratado (Eixo 04)</th>
+                <th className="p-3">Entregáveis Pendentes (Eixo 05)</th>
+                <th className="p-3 text-center">Tempo Futuro (Minutos)</th>
+                <th className="p-3 text-right">Carga Semanal (Horas)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800 text-xs">
+              {calculoPassivoFuturo.pacientesDetalhados.map((p) => (
+                <tr key={p.id} className="hover:bg-slate-800/40 transition-all">
+                  <td className="p-3 font-bold text-white flex items-center gap-2">
+                    <User className="h-3.5 w-3.5 text-indigo-400" />
+                    {p.nomePaciente}
+                  </td>
+                  <td className="p-3 text-slate-300">
+                    <span className="flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5 text-emerald-400" />
+                      {p.servicoContratado}
+                    </span>
+                  </td>
+                  <td className="p-3 text-slate-400">
+                    <div className="space-y-0.5">
+                      {p.entregaveisPendentes.map((ent, i) => (
+                        <span key={i} className="block text-[10px] text-slate-300 flex items-center gap-1">
+                          <PackageCheck className="h-3 w-3 text-amber-400" />
+                          {ent}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="p-3 text-center font-bold font-mono text-amber-400">
+                    {p.tempoFuturoMinutosSemana} min/sem
+                  </td>
+                  <td className="p-3 text-right font-bold font-mono text-emerald-400">
+                    {p.tempoFuturoHorasSemana}h / sem
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Resumo do Passivo Técnico */}
+        <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+          <div>
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">Pacientes Ativos Mapeados</span>
+            <span className="text-base font-extrabold text-white">{calculoPassivoFuturo.totalPacientesAtivos} pacientes</span>
           </div>
-
-          <div className="flex items-center justify-between text-xs pt-1">
-            <span className="text-white font-bold">Janela Livre para Novos Atendimentos:</span>
-            <span className="font-extrabold text-emerald-300 font-mono text-sm">
-              ~{Math.max(0, horasClinicasLiquidasSemana - Math.round(horasClinicasLiquidasSemana * 0.6))}h / semana
+          <div>
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">Tempo Futuro Total Comprometido</span>
+            <span className="text-base font-extrabold text-amber-400 font-mono">
+              {calculoPassivoFuturo.totalMinutosSemanaComprometidos} min ({calculoPassivoFuturo.totalHorasSemanaComprometidas}h/sem)
+            </span>
+          </div>
+          <div>
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">Consumo Mensal de Agenda</span>
+            <span className="text-base font-extrabold text-emerald-400 font-mono">
+              ~{calculoPassivoFuturo.totalHorasMesComprometidas}h / mês
             </span>
           </div>
         </div>
       </div>
 
-      {/* Botões de Ação */}
+      {/* ── SEÇÃO 4: GRADEADOR TÁTICO ANALÍTICO DA AGENDA (100% NEUTRO) ── */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2">
+          <Clock className="h-4 w-4 text-emerald-400" />
+          4. Gradeador Tático da Agenda &amp; Teto Físico de Capacidade ($N_&#123;\max&#125;$)
+        </h2>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          Consolidação analítica neutra do saldo de horas disponíveis e teto físico máximo de pacientes ativos sem extrapolar a grade.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-1 text-center">
+            <span className="text-[10px] font-bold uppercase text-slate-400">Horas Clínicas Dedicadas</span>
+            <p className="text-xl font-extrabold text-emerald-400 font-mono">{horasPorDominio.tecnico || 30}h / semana</p>
+          </div>
+
+          <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-1 text-center">
+            <span className="text-[10px] font-bold uppercase text-slate-400">Janela Livre para Novos Atendimentos</span>
+            <p className="text-xl font-extrabold text-indigo-400 font-mono">
+              ~{calculoPassivoFuturo.janelaLivreHorasSemana}h / semana
+            </p>
+          </div>
+
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-1 text-center">
+            <span className="text-[10px] font-bold uppercase text-emerald-400">Teto Físico de Pacientes (N max)</span>
+            <p className="text-xl font-extrabold text-emerald-300 font-mono">
+              {calculoPassivoFuturo.tetoFisicoPacientes} pacientes ativos
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Botão de Avanço */}
       <div className="flex items-center justify-between border-t border-slate-800 pt-6">
         {salvo ? (
           <span className="text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
@@ -278,7 +420,7 @@ export default function Fase06Flow({ uid, initialState, onAvancarEixo07 }: Fase0
           onClick={handleSalvar}
           className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm px-8 py-3.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 cursor-pointer"
         >
-          Salvar e Avançar para Equipe (Eixo 07)
+          Salvar Mapeamento da Agenda e Avançar para Equipe (Eixo 07)
           <ArrowRight className="h-4 w-4" />
         </button>
       </div>
